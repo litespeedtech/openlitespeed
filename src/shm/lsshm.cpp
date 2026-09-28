@@ -77,21 +77,16 @@ int ls_expandfile(int fd, LsShmOffset_t fromsize, LsShmXSize_t incrsize)
     return 0;
 }
 
-
-LsShmSize_t ls_shm_pagesize(void)
-{
-    static LsShmSize_t s_iSysPageSize = 0;
-    if (s_iSysPageSize == 0)
-    {
-        long size = sysconf(_SC_PAGESIZE);
-        if (size < LSSHM_PAGESIZE)
-            size = LSSHM_PAGESIZE;
-        s_iSysPageSize = (LsShmSize_t)size;
-    }
-    return s_iSysPageSize;
-}
-
 };
+
+
+static LsShmSize_t getShmPageSize()
+{
+    long pagesize = sysconf(_SC_PAGESIZE);
+    if (pagesize < LSSHM_PAGESIZE)
+        return LSSHM_PAGESIZE;
+    return (LsShmSize_t)pagesize;
+}
 
 
 typedef union
@@ -123,6 +118,7 @@ LsShmVersion s_version =
 {
     { LSSHM_VER_MAJOR, LSSHM_VER_MINOR, LSSHM_VER_REL, LSSHM_VER_TYPE }
 };
+LsShmSize_t LsShm::s_iPageSize = getShmPageSize();
 LsShmSize_t LsShm::s_iShmHdrSize = ((sizeof(LsShmMap) + 0xf) &
                                     ~0xf); // align 16
 const char *LsShm::s_pDirBase[] = {NULL, NULL, NULL, NULL, NULL};
@@ -565,8 +561,8 @@ LsShmStatus_t LsShm::openLockShmFile(int mode)
 
 LsShmStatus_t LsShm::newShmMap(LsShmSize_t size, uint64_t id)
 {
-    if (size < ls_shm_pagesize())
-        size = ls_shm_pagesize();
+    if (size < s_iPageSize)
+        size = s_iPageSize;
     if ((expandFile(0, roundToPageSize(size)) != LSSHM_OK)
         || (mapAddrMap(size) != LSSHM_OK))
         return LSSHM_ERROR;
@@ -640,7 +636,7 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         return m_status;
     }
 
-    size = roundToPageSize(size);
+    size = ((size + s_iPageSize - 1) / s_iPageSize) * s_iPageSize;
 
     if (fstat(m_iFd, &mystat) < 0)
     {
@@ -799,7 +795,7 @@ LsShmStatus_t LsShm::expand(LsShmXSize_t incrSize)
 
 LsShmStatus_t LsShm::mapAddrMap(LsShmXSize_t size)
 {
-    if (m_addrMap.remap(m_iFd, m_iMaxSizeO, size) == LS_FAIL)
+    if (m_addrMap.remap(m_iFd, m_iMaxSizeO, size, s_iPageSize) == LS_FAIL)
     {
         setErrMsg(LSSHM_SYSERROR, "Unable to mmap [%s], old map size = %lu, size=%lu, %s.",
                   m_pFileName, (unsigned long)m_iMaxSizeO, (unsigned long)size, strerror(errno));
@@ -930,13 +926,10 @@ int LsShm::recoverOrphanShm()
     if ((getGlobalPool() == NULL) || (m_pGHash == NULL))
         return 0;
 
-    m_pGHash->disableAutoLock();
-    m_pGHash->lockChkRehash();
+    LsShmHashAutoLock lock(m_pGHash);
     LsShmSize_t size = m_pGHash->size();
     m_pGHash->for_each2(m_pGHash->begin(), m_pGHash->end(), chkReg, this);
     size -= m_pGHash->size();
-    m_pGHash->unlock();
-    m_pGHash->enableAutoLock();
     return (int)size;
 }
 
@@ -1029,20 +1022,16 @@ LsShmPool *LsShm::getNamedPool(const char *name)
 
 LsShmHash *LsShm::getGlobalHash(int initSize)
 {
-    int isAutoLock;
-
     if (m_pGHash)
         return m_pGHash;
     LsShmPool *gpool = getGlobalPool();
     if (gpool == NULL)
         return NULL;
 
-    isAutoLock = gpool->m_iAutoLock;
-    if (isAutoLock)
-    {
-        gpool->m_iAutoLock = 0;
-        gpool->lock();
-    }
+    // Called from getNamedHash(), which already holds this lock: the guard
+    // takes nothing then, where this used to clear m_iAutoLock and use the
+    // cleared flag as the "the caller has it" marker.
+    LsShmPoolLock lock(gpool, true);
 
     if (!x_pShmMap->x_globalHashOff)
     {
@@ -1056,11 +1045,6 @@ LsShmHash *LsShm::getGlobalHash(int initSize)
                                           LsShmHash::hashXXH32, memcmp,
                                           LSSHM_FLAG_NONE);
 
-    if (isAutoLock)
-    {
-        gpool->unlock();
-        gpool->m_iAutoLock = 1;
-    }
     return m_pGHash;
 }
 

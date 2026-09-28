@@ -1420,16 +1420,38 @@ static lsxpack_err_code validateReqValue(const char *val, int len,
 //where it carries no path meaning and is used by some applications.
 static lsxpack_err_code validateReqPath(const char *val, int len)
 {
+    if (len == 1 && *val == '*')
+        return LSXPACK_OK;
+    if (len <= 0 || *val != '/')
+        return LSXPACK_ERR_BAD_REQ_HEADER;
     unsigned char mask = UPK_VAL_BAD | UPK_DELIM_BAD | UPK_BSLASH_BAD;
     const unsigned char *p = (const unsigned char *)val;
     const unsigned char *pEnd = p + len;
     for (; p < pEnd; ++p)
     {
-        if (s_reqHeaderCharErr[*p] & mask)
+        if (*p == '#' || (s_reqHeaderCharErr[*p] & mask))
             return LSXPACK_ERR_BAD_REQ_HEADER;
         if (*p == '?')
             mask = UPK_VAL_BAD | UPK_DELIM_BAD;   //query string: allow '\'
     }
+    return LSXPACK_OK;
+}
+
+
+static lsxpack_err_code validateReqScheme(const char *val, int len)
+{
+    const unsigned char *p = (const unsigned char *)val;
+    const unsigned char *pEnd = p + len;
+    if (p == pEnd
+        || !((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z')))
+        return LSXPACK_ERR_BAD_REQ_HEADER;
+    ++p;
+    for (; p < pEnd; ++p)
+        if (!((*p >= '0' && *p <= '9')
+              || (*p >= 'A' && *p <= 'Z')
+              || (*p >= 'a' && *p <= 'z'))
+            && *p != '+' && *p != '-' && *p != '.')
+            return LSXPACK_ERR_BAD_REQ_HEADER;
     return LSXPACK_OK;
 }
 
@@ -1517,7 +1539,7 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
         case UPK_HDR_SCHEME:  //":scheme"
             if (scheme)
                 return LSXPACK_ERR_DUPLICATE_PSDO_HDR;
-            if ((err = validateReqValue(val, hdr->val_len, UPK_VAL_BAD)))
+            if ((err = validateReqScheme(val, hdr->val_len)))
                 return err;
             scheme = true;
             //Do nothing
@@ -1628,6 +1650,11 @@ lsxpack_err_code UpkdHdrBuilder::end()
 {
     if (!scheme || !headers->isComplete())
         return LSXPACK_ERR_INCOMPL_REQ_PSDO_HDR;
+
+    if (headers->getUrlLen() == 1 && *headers->getUrl() == '*'
+        && (headers->getMethodLen() != 7
+            || memcmp(headers->getMethod(), "OPTIONS", 7) != 0))
+        return LSXPACK_ERR_BAD_REQ_HEADER;
 
     if (working)
     {

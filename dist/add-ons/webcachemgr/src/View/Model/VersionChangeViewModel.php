@@ -3,7 +3,7 @@
 /* * ******************************************
  * LiteSpeed Web Server Cache Manager
  * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2018-2019
+ * @copyright (c) 2018-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
@@ -11,6 +11,7 @@ namespace Lsc\Wp\View\Model;
 use \Lsc\Wp\Context\Context;
 use \Lsc\Wp\LSCMException;
 use \Lsc\Wp\Logger;
+use \Lsc\Wp\Util;
 
 class VersionChangeViewModel
 {
@@ -68,7 +69,7 @@ class VersionChangeViewModel
 
     protected function grabSessionData()
     {
-        $info = $_SESSION['verInfo'];
+        $info = $_SESSION[Util::sessionKey('verInfo')];
 
         $this->tplData[self::FLD_INSTALLS_COUNT] = count($info['installs']);
         $this->tplData[self::FLD_VER_NUM] = $info['verNum'];

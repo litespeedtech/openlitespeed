@@ -124,6 +124,7 @@ public:
 
     static void testQueryString();
     static void testMultipart();
+    static void testMultipartParentPath();
     static void testAll();
 
 private:

@@ -30,6 +30,10 @@ extern "C"
 #define LSCGID_LISTENSOCK_FD    0
 
 #define LSCGID_VERSION_1         1
+#define LSCGID_VERSION_2         2
+
+#define LSCGID_SECRET_LEN        16
+#define LSCGID_MAC_LEN           16
 
 #define LSCGID_NAME             "lscgid"
 #define LSCGID_SECRET           "LSCGID_SECRET"
@@ -73,7 +77,11 @@ typedef struct
     struct rlimit   m_cpu;
 #endif
     unsigned char   m_nonce[16];
-    unsigned char   m_md5[16];
+    /*
+     * Legacy field name.  Contains keyed BLAKE2b-128 over this structure
+     * with m_md5 zeroed, followed by m_szData request bytes.
+     */
+    unsigned char   m_md5[LSCGID_MAC_LEN];
 
 } lscgid_req;
 
@@ -83,4 +91,3 @@ typedef struct
 #endif
 
 #endif
-

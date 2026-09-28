@@ -37,6 +37,12 @@ class CPanel extends ControlPanel
     const THEME_JUPITER_USER_PLUGIN_DIR = '/usr/local/cpanel/base/frontend/jupiter/ls_web_cache_manager';
 
     /**
+     * @since 1.17.12.0
+     * @var string
+     */
+    const THEME_MERIDIAN_USER_PLUGIN_DIR = '/usr/local/cpanel/base/frontend/meridian/ls_web_cache_manager';
+
+    /**
      * @since 1.13.11
      * @var string
      */
@@ -249,6 +255,7 @@ class CPanel extends ControlPanel
         exec('/scripts/ensure_vhost_includes --all-users');
 
         if ( file_exists(self::THEME_JUPITER_USER_PLUGIN_DIR)
+                || file_exists(self::THEME_MERIDIAN_USER_PLUGIN_DIR)
                 || file_exists(self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR) ) {
 
             self::UpdateCpanelPluginConf(
@@ -475,6 +482,7 @@ class CPanel extends ControlPanel
 
         $existingInstall = (
             file_exists(self::THEME_JUPITER_USER_PLUGIN_DIR)
+                || file_exists(self::THEME_MERIDIAN_USER_PLUGIN_DIR)
                 || file_exists(self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR)
         );
 
@@ -582,6 +590,9 @@ class CPanel extends ControlPanel
         if ( file_exists(self::THEME_JUPITER_USER_PLUGIN_DIR) ) {
             $pluginDir = self::THEME_JUPITER_USER_PLUGIN_DIR;
         }
+        elseif ( file_exists(self::THEME_MERIDIAN_USER_PLUGIN_DIR) ) {
+            $pluginDir = self::THEME_MERIDIAN_USER_PLUGIN_DIR;
+        }
         elseif ( file_exists(self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR) ) {
             $pluginDir = self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR;
         }
@@ -650,6 +661,10 @@ class CPanel extends ControlPanel
             $pluginInstalls[] = self::THEME_JUPITER_USER_PLUGIN_DIR;
         }
 
+        if ( file_exists(self::THEME_MERIDIAN_USER_PLUGIN_DIR) ) {
+            $pluginInstalls[] = self::THEME_MERIDIAN_USER_PLUGIN_DIR;
+        }
+
         if ( file_exists(self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR) ) {
             $pluginInstalls[] = self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR;
         }
@@ -711,11 +726,16 @@ class CPanel extends ControlPanel
     {
         $jupiterUninstallFile = self::THEME_JUPITER_USER_PLUGIN_DIR . '/'
             . self::USER_PLUGIN_RELATIVE_UNINSTALL_SCRIPT;
+        $meridianUninstallFile = self::THEME_MERIDIAN_USER_PLUGIN_DIR . '/'
+            . self::USER_PLUGIN_RELATIVE_UNINSTALL_SCRIPT;
         $paperLanternUninstallFile = self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR
             . '/' . self::USER_PLUGIN_RELATIVE_UNINSTALL_SCRIPT;
 
         if ( file_exists($jupiterUninstallFile) ) {
             $uninstallFile = $jupiterUninstallFile;
+        }
+        elseif ( file_exists($meridianUninstallFile) ) {
+            $uninstallFile = $meridianUninstallFile;
         }
         elseif ( file_exists($paperLanternUninstallFile) ) {
             $uninstallFile = $paperLanternUninstallFile;
@@ -761,6 +781,9 @@ class CPanel extends ControlPanel
     /**
      *
      * @since 1.13.2.2  Made function static.
+     * @since 1.17.12.0  Applies the update to every detected
+     *     theme install (jupiter, meridian, paper_lantern) instead of the
+     *     jupiter-XOR-paper_lantern install resolved previously.
      *
      * @param string $setting
      * @param mixed  $value
@@ -779,7 +802,19 @@ class CPanel extends ControlPanel
         if ( file_exists(self::THEME_JUPITER_USER_PLUGIN_DIR) ) {
             $pluginInstalls[] = self::THEME_JUPITER_USER_PLUGIN_DIR;
         }
-        else {
+
+        if ( file_exists(self::THEME_MERIDIAN_USER_PLUGIN_DIR) ) {
+            $pluginInstalls[] = self::THEME_MERIDIAN_USER_PLUGIN_DIR;
+        }
+
+        if ( file_exists(self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR) ) {
+            $pluginInstalls[] = self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR;
+        }
+
+        if ( empty($pluginInstalls) ) {
+            // Preserve historic behavior: with no plugin install detected,
+            // resolve against the Paper Lantern path so the conf-file lookup
+            // below throws the documented LSCMException.
             $pluginInstalls[] = self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR;
         }
 

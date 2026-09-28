@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2019-2025 LiteSpeed Technologies, Inc.
+ * @copyright 2019-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
@@ -12,6 +12,7 @@ namespace Lsc\Wp\View\Model;
 use Lsc\Wp\Context\Context;
 use Lsc\Wp\LSCMException;
 use Lsc\Wp\Logger;
+use Lsc\Wp\Util;
 
 class MassDashNotifyProgressViewModel
 {
@@ -21,6 +22,9 @@ class MassDashNotifyProgressViewModel
     const FLD_ACTIVE_VER     = 'activeVer';
 
     /**
+     * Un-prefixed session key name. Pass it through Util::sessionKey() to get
+     * the actual $_SESSION key.
+     *
      * @var string
      */
     protected $sessionKey = 'massDashNotifyInfo';
@@ -86,7 +90,7 @@ class MassDashNotifyProgressViewModel
 
     protected function grabSessionData()
     {
-        $info = $_SESSION[$this->sessionKey];
+        $info = $_SESSION[Util::sessionKey($this->sessionKey)];
 
         $this->tplData[self::FLD_INSTALLS_COUNT] = count($info['installs']);
     }

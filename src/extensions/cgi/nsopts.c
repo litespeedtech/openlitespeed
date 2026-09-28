@@ -21,6 +21,7 @@
 #include "ns.h"
 #include "nsnosandbox.h"
 #include "nsopts.h"
+#include "rootcheck.h"
 #include "nspersist.h"
 #include "nsutils.h"
 #include "lscgid.h"
@@ -993,7 +994,15 @@ int nsopts_get(lscgid_t *pCGI, int *allocated, SetupOp **setupOps,
                                     allocated, &count, setupOps, setupOps_size);
         }
         else
-            rc = nsopts_parse(env, &count, allocated, setupOps, setupOps_size);
+        {
+            /* These files control privileged mount operations.  Validate the
+             * exact path immediately before opening it as root. */
+            if (geteuid() == 0)
+                rc = check_root_protected_file((char *)env);
+            if (!rc)
+                rc = nsopts_parse(env, &count, allocated, setupOps,
+                                  setupOps_size);
+        }
         if (!rc && i == 1)
         {
             int found_op = 0;

@@ -202,7 +202,24 @@ int GPath::clean(char *path, int len)
             break;
         }
     }
-    return p0 - path - 1;
+    int cleanedLen = p0 - path - 1;
+    if (state == 2)
+    {
+        path[--cleanedLen] = 0;
+        return cleanedLen;
+    }
+    if (state == 3)
+    {
+        int parentEnd = cleanedLen - 3;
+        if (parentEnd < 0 || (parentEnd == 0 && *path == '/'))
+            return LS_FAIL;
+        int parentSlash = parentEnd - 1;
+        while (parentSlash >= 0 && path[parentSlash] != '/')
+            --parentSlash;
+        cleanedLen = parentSlash + 1;
+        path[cleanedLen] = 0;
+    }
+    return cleanedLen;
 }
 
 int GPath::concat(char *dest, size_t size, const char *pRoot,
@@ -642,7 +659,6 @@ int GPath::safeCreateFile( const char *pFile, int mode)
     }
     return fd;
 }
-
 
 
 

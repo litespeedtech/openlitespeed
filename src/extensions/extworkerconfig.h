@@ -57,6 +57,7 @@ class ExtWorkerConfig
     char        m_iSelfManaged;
     char        m_iStartByServer;
     char        m_iRefAddr;
+    char        m_iAltAddr;
     char        m_iDaemonSuEXEC;
     char        m_iDropCaps;
 

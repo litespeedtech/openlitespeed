@@ -167,6 +167,7 @@ HttpSession::HttpSession()
     , m_processState(HSPS_READ_REQ_HEADER)
     , m_curHookLevel(0)
     , m_pVHostAcl(NULL)
+    , m_pWebSocketBackend(NULL)
     , m_iVHostAccess(0)
     , m_lockMtHolder(0)
     , m_pAiosfcb(NULL)
@@ -1367,12 +1368,125 @@ int HttpSession::switchToWebSocket(const GSockAddr *pAddr, bool ssl,
 }
 
 
-int HttpSession::processWebSocketUpgrade(HttpVHost *pVHost)
+static bool hasWebSocketBackend(const HttpContext *pContext)
 {
-    HttpContext *pContext = pVHost->bestMatch(m_request.getURI(),
-                                                    m_request.getURILen());
+    return pContext
+           && ((pContext->getWebSockAddr()
+                && pContext->getWebSockAddr()->get())
+               || pContext->getWebSockAddrStr());
+}
+
+
+//An error document is served as is. It must never open the WebSocket
+//tunnel of the context it maps to, since that would forward the rejected
+//request to the backend.
+bool HttpSession::shouldUpgradeWebSocket(const HttpContext *pContext) const
+{
+    return m_request.isWebsocket() && !m_request.isErrorPage()
+           && hasWebSocketBackend(pContext);
+}
+
+
+void HttpSession::clearDeferredWebSocket()
+{
+    m_pWebSocketBackend = NULL;
+    if (m_sWebSocketUrl.c_str())
+        *m_sWebSocketUrl.buf() = 0;
+    m_sWebSocketUrl.setLen(0);
+}
+
+
+int HttpSession::deferWebSocketUpgrade(const char *pUrl, int len)
+{
+    if (len <= 0 || m_sWebSocketUrl.setStr(pUrl, len) != len)
+        return SC_500;
+    return 0;
+}
+
+
+int HttpSession::mapAndAuthWebSocketUpgrade(
+    const HttpContext *pBackendContext)
+{
+    const HttpContext *pOldContext = m_request.getContext();
+    int ret = m_request.processContext();
+    if (ret && ret != -2)
+    {
+        if (m_sWebSocketUrl.len() == 0)
+            return ret;
+        m_request.clearLocation();
+        m_request.setContext(pBackendContext);
+    }
+
+    HttpContext *pAuthContext = (HttpContext *)m_request.getContext();
+    if (!pAuthContext)
+        pAuthContext = (HttpContext *)pBackendContext;
+    if (pAuthContext != pOldContext)
+    {
+        //processContext() returns redirects and errors before it resets the
+        //flag, and the flag survives internal redirect restarts.
+        m_request.clearContextState(CONTEXT_AUTH_CHECKED);
+        if (pAuthContext && pAuthContext->getModuleConfig() != NULL)
+        {
+            m_sessionHooks.inherit(pAuthContext->getSessionHooks(), 0);
+            m_pModuleConfig = pAuthContext->getModuleConfig();
+        }
+    }
+    m_pWebSocketBackend = pBackendContext;
+    return authWebSocketUpgrade(pAuthContext);
+}
+
+
+/**
+ * A WebSocket upgrade only needs the context access and authentication
+ * checks before the backend tunnel is opened. Jump straight to them and skip
+ * the rest of the normal HTTP request processing (hooks, rewrite, URI and
+ * file mapping). AUTH_DONE performs the switch, which also covers the case
+ * that authentication completes asynchronously.
+ */
+int HttpSession::authWebSocketUpgrade(const HttpContext *pContext)
+{
+    if (pContext != m_request.getContext())
+    {
+        HttpContext *pCtx = (HttpContext *)pContext;
+        m_request.setContext(pContext);
+        m_request.clearContextState(CONTEXT_AUTH_CHECKED);
+        if (pCtx && pCtx->getModuleConfig() != NULL)
+        {
+            m_sessionHooks.inherit(pCtx->getSessionHooks(), 0);
+            m_pModuleConfig = pCtx->getModuleConfig();
+        }
+    }
+    setFlag(HSF_URI_PROCESSED);
+    setProcessState(HSPS_CHECK_AUTH_ACCESS);
+    return 0;
+}
+
+
+int HttpSession::sendOptionsAsteriskResp()
+{
+    static const char s_achAllow[] = "GET, HEAD, POST, OPTIONS";
+    LS_DBG_L(getLogSession(), "Answer server-wide OPTIONS request directly.");
+    if (m_request.getBodyRemain() > 0)
+        m_request.keepAlive(false);
+    m_request.setStatusCode(SC_200);
+    setProcessState(HSPS_HANDLER_PROCESSING);
+    setState(HSS_WRITING);
+    resetResp();
+    m_response.getRespHeaders().add("Allow", 5, s_achAllow,
+                                    sizeof(s_achAllow) - 1);
+    m_response.setContentLen(0);
+    sendRespHeaders();
+    endResponse(1);
+    HttpStats::getReqStats()->incReqProcessed();
+    return 0;
+}
+
+
+int HttpSession::processWebSocketUpgrade(HttpVHost *pVHost,
+                                         const HttpContext *pContext)
+{
     LS_DBG_L(getLogSession(),
-             "Request web socket upgrade, VH name: [%s] URI: [%s]",
+             "Request websocket upgrade, VH name: [%s] URI: [%s]",
              pVHost->getName(), m_request.getURI());
     const GSockAddr *pAddr = NULL;
     bool ssl = false;
@@ -1456,6 +1570,7 @@ int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
 int HttpSession::processNewReqInit()
 {
     int ret;
+    clearDeferredWebSocket();
 
     if ( m_request.getHttpHeaderLen() > 0 )
         LS_DBG_H(getLogSession(), "Headers: %.*s",
@@ -1463,13 +1578,15 @@ int HttpSession::processNewReqInit()
 
     HttpServerConfig &httpServConf = HttpServerConfig::getInstance();
     int useProxyHeader = httpServConf.getUseProxyHeader();
+    bool trustProxyHeaders = (useProxyHeader == 1) || (useProxyHeader == 4)
+        || (((useProxyHeader == 2) || (useProxyHeader == 3))
+            && (getClientInfo()->getAccess() == AC_TRUST));
+    m_request.processCacheFrontendHeader(trustProxyHeaders);
     if (getStream()->isSpdy())
     {
         //m_request.orGzip(REQ_GZIP_ACCEPT | httpServConf.getGzipCompress());
     }
-    if ((useProxyHeader == 1) || (useProxyHeader == 4)
-        || (((useProxyHeader == 2) || (useProxyHeader == 3))
-            && (getClientInfo()->getAccess() == AC_TRUST)))
+    if (trustProxyHeaders)
     {
         char name_buf[20];
         const char *pName;
@@ -1560,20 +1677,19 @@ int HttpSession::processNewReqInit()
     if (ret)
         return ret;
 
+    if (m_request.isOptionsAsterisk())
+        return sendOptionsAsteriskResp();
+
     if (m_request.isWebsocket())
     {
-        setProcessState(HSPS_WEBSOCKET);
-        ret = processWebSocketUpgrade((HttpVHost *)pVHost);
-        if (ret == SC_404)
-        {
-            m_request.setStatusCode(SC_200);
-            setProcessState(HSPS_HKPT_HTTP_BEGIN);
-            return 0;
-        }
-        else
-            return ret;
+        const HttpContext *pWsContext = ((HttpVHost *)pVHost)->bestMatch(
+                                            m_request.getURI(),
+                                            m_request.getURILen());
+        if (hasWebSocketBackend(pWsContext))
+            return mapAndAuthWebSocketUpgrade(pWsContext);
     }
-    else if (httpServConf.getEnableH2c() == 1 && m_request.isHttp2Upgrade())
+
+    if (httpServConf.getEnableH2c() == 1 && m_request.isHttp2Upgrade())
     {
         //  setProcessState(HSPS_WEBSOCKET);
         processHttp2Upgrade(pVHost);
@@ -1951,13 +2067,28 @@ int HttpSession::processVHostRewrite()
         }
         if (ret == URL_MODIFIED)      //rewrite happens
         {
-            m_request.postRewriteProcess(
-                RewriteEngine::getInstance().getResultURI(),
-                RewriteEngine::getInstance().getResultURILen());
+            if (m_request.postRewriteProcess(
+                    RewriteEngine::getInstance().getResultURI(),
+                    RewriteEngine::getInstance().getResultURILen())
+                == LS_FAIL)
+                return SC_400;
             ret = 0;
         }
+        else if (ret == URL_HANDLER_WEBSOCKET && m_request.isErrorPage())
+            ret = 0;    //serve the error document, see shouldUpgradeWebSocket()
         else if (ret == URL_HANDLER_WEBSOCKET)
-            return switchToWebSocket(RewriteEngine::getInstance().getResultURI());
+        {
+            ret = deferWebSocketUpgrade(
+                      RewriteEngine::getInstance().getResultURI(),
+                      RewriteEngine::getInstance().getResultURILen());
+            if (ret)
+                return ret;
+            const HttpContext *pWsContext = m_request.getVHost()->bestMatch(
+                                                m_request.getURI(),
+                                                m_request.getURILen());
+            return mapAndAuthWebSocketUpgrade(pWsContext ? pWsContext
+                                                        : pContext);
+        }
 
         else if (ret)
         {
@@ -2247,8 +2378,12 @@ int HttpSession::processContextMap()
     }
     else
     {
-        setProcessState(HSPS_CONTEXT_REWRITE);
-        if (((pCtx = (HttpContext *)m_request.getContext()) != pOldCtx)
+        pCtx = (HttpContext *)m_request.getContext();
+        if (shouldUpgradeWebSocket(pCtx))
+            setProcessState(HSPS_CHECK_AUTH_ACCESS);
+        else
+            setProcessState(HSPS_CONTEXT_REWRITE);
+        if ((pCtx != pOldCtx)
             && pCtx->getModuleConfig() != NULL)
         {
             m_sessionHooks.inherit(pCtx->getSessionHooks(), 0);
@@ -2296,9 +2431,12 @@ int HttpSession::processContextRewrite()
     if (ret == URL_MODIFIED)
     {
         ret = 0;
-        if (m_request.postRewriteProcess(
-                RewriteEngine::getInstance().getResultURI(),
-                RewriteEngine::getInstance().getResultURILen()))
+        int rewriteRet = m_request.postRewriteProcess(
+                             RewriteEngine::getInstance().getResultURI(),
+                             RewriteEngine::getInstance().getResultURILen());
+        if (rewriteRet == LS_FAIL)
+            return SC_400;
+        if (rewriteRet)
         {
             clearFlag(HSF_URI_PROCESSED);
             m_request.orContextState(PROCESS_CONTEXT);
@@ -2316,8 +2454,20 @@ int HttpSession::processContextRewrite()
         m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
         setProcessState(HSPS_CHECK_AUTH_ACCESS);
     }
+    else if (ret == URL_HANDLER_WEBSOCKET && m_request.isErrorPage())
+    {
+        ret = 0;    //serve the error document, see shouldUpgradeWebSocket()
+        setProcessState(HSPS_HKPT_URI_MAP);
+    }
     else if (ret == URL_HANDLER_WEBSOCKET)
-        return switchToWebSocket(RewriteEngine::getInstance().getResultURI());
+    {
+        ret = deferWebSocketUpgrade(
+                  RewriteEngine::getInstance().getResultURI(),
+                  RewriteEngine::getInstance().getResultURILen());
+        if (ret)
+            return ret;
+        return authWebSocketUpgrade(m_request.getContext());
+    }
     else
         setProcessState(HSPS_HKPT_URI_MAP);
 
@@ -2770,6 +2920,7 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
 
 int HttpSession::sendHttpError(const char *pAdditional)
 {
+    clearDeferredWebSocket();
     int statusCode = m_request.getStatusCode();
     LS_DBG_L(getLogSession(), "HttpSession::sendHttpError(), code = '%s'.",
              HttpStatusCode::getInstance().getCodeString(m_request.getStatusCode()));
@@ -3412,6 +3563,7 @@ void HttpSession::recycle()
         releaseReqParser();
     }
     m_sExtCmdResBuf.clear();
+    clearDeferredWebSocket();
 
 //9/20/19 add releaseResources() in recycle
     m_response.reset(1);
@@ -6265,6 +6417,7 @@ int HttpSession::smProcessReq()
         case HSPS_AUTH_DONE:
             if (!(getFlag(HSF_URI_PROCESSED)))
             {
+                clearDeferredWebSocket();
                 setProcessState(HSPS_CONTEXT_MAP);
                 break;
             }
@@ -6272,6 +6425,23 @@ int HttpSession::smProcessReq()
             {
                 ret = SC_404;
                 clearFlag(HSF_SC_404);
+                break;
+            }
+            else if (m_sWebSocketUrl.len())
+            {
+                setProcessState(HSPS_WEBSOCKET);
+                ret = switchToWebSocket(m_sWebSocketUrl.c_str());
+                break;
+            }
+            else if (shouldUpgradeWebSocket(m_pWebSocketBackend
+                                            ? m_pWebSocketBackend
+                                            : m_request.getContext()))
+            {
+                setProcessState(HSPS_WEBSOCKET);
+                ret = processWebSocketUpgrade(
+                          m_request.getVHost(),
+                          m_pWebSocketBackend ? m_pWebSocketBackend
+                                              : m_request.getContext());
                 break;
             }
             else
@@ -7096,7 +7266,10 @@ int HttpSession::setUriQueryString(int action, const char *uri,
     case LSI_URL_NOCHANGE:
     case LSI_URL_REWRITE:
         if (uri_act != LSI_URL_NOCHANGE)
-            getReq()->setRewriteURI(tmpBuf, urlLen, 1);
+        {
+            if (getReq()->setRewriteURI(tmpBuf, urlLen) == LS_FAIL)
+                return LS_FAIL;
+        }
         if (qs_act & URL_QS_OP_MASK)
             getReq()->setRewriteQueryString(pQs, final_qs_len);
 //        pSession->getReq()->addEnv(11);

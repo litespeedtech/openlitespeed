@@ -1304,7 +1304,8 @@ void QuicShm::cleanupPidShm(pid_t pid)
 
     LS_DBG_L("[PID %d] [QuicShm::cleanupPidShm] cleaning up after pid %d%s",
              s_pid, pid, pid == s_pid ? " (ourselves)" : "");
-
+    if (!m_pPidPacketOffsetMap)
+        return;
     m_pPidPacketOffsetMap->lock();
     status = getPidInfo(pid, info, iter);
     if (GPIS_FOUND == status)

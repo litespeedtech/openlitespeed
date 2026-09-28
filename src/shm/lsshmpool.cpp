@@ -327,18 +327,18 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
                                            vc)) != (LsShmHash *)-1))
         return pObj;
 
-    int isAutoLock = m_iAutoLock;
-    if (isAutoLock)
+    // Hold the pool lock for the whole lookup and creation; the allocations
+    // below re-enter the pool and nest into this one.  This used to clear
+    // m_iAutoLock for the duration to force the lock, which another thread
+    // could see between its own lock and unlock and so release a lock it
+    // never took.
+    LsShmPoolLock lock(this);
+    if (!getShm()->isLocked(m_pShmLock))
     {
-        m_iAutoLock = 0;
-        lock();
-    }
-
-    if(!getShm()->isLocked(m_pShmLock))
-    {
+        // auto locking is off and the caller did not take the lock
         int lock_pid = *m_pShmLock;
         SHM_WARN("LsShmPool::getNamedHash locked by %d, lock again", lock_pid);
-        lock();
+        lock.acquire(this, true);
         assert(getShm()->isLocked(m_pShmLock));
     }
 
@@ -362,11 +362,6 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
             if (created && pObj != NULL && pVerMagic != NULL)
                 pObj->setDataVerMagic(*pVerMagic);
         }
-    }
-    if (isAutoLock)
-    {
-        unlock();
-        m_iAutoLock = 1;
     }
     if (pCreated != NULL)
         *pCreated = created;
@@ -502,7 +497,7 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size)
         return 0;
 
     size = roundDataSize(size);
-    autoLock();
+    LsShmPoolLock lock(this);
     do
     {
         offset = alloc2Ex(size);
@@ -523,7 +518,6 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size)
         release2NoJoin(offset, size - firstpart_size);
         getDataMap()->x_stat.m_iPoolInUse -= size;
     } while(1);
-    autoUnlock();
     return offset;
 }
 
@@ -541,9 +535,8 @@ void LsShmPool::release2Ex(LsShmOffset_t offset, LsShmSize_t size)
     {
         if (m_pParent)
         {
-            m_pParent->autoLock();
+            LsShmPoolLock lock(m_pParent);
             m_pParent->releasePageLocked(offset, size);
-            m_pParent->autoUnlock();
         }
         else
             releasePageLocked(offset, size);
@@ -563,9 +556,8 @@ void LsShmPool::release2NoJoin(LsShmOffset_t offset, LsShmSize_t size)
     {
         if (m_pParent)
         {
-            m_pParent->autoLock();
+            LsShmPoolLock lock(m_pParent);
             m_pParent->releasePageNoJoinLocked(offset, size);
-            m_pParent->autoUnlock();
         }
         else
             releasePageNoJoinLocked(offset, size);
@@ -591,22 +583,17 @@ void LsShmPool::release2(LsShmOffset_t offset, LsShmSize_t size)
     if (size >= LSSHM_SHM_UNITSIZE)
     {
         LsShmPool *pPagePool = ((m_pParent != NULL) ? m_pParent : this);
-        pPagePool->autoLock();
+        LsShmPoolLock lock(pPagePool);
         pPagePool->releasePageLocked(offset, size);
         if (m_pParent)
-        {
-            pPagePool->autoUnlock();
-            autoLock();
-        }
+            lock.acquire(this);     // hand over from the parent to our own
         incrCheck(&getDataMap()->x_stat.m_iPgReleased, roundSize2pages(size));
-        autoUnlock();
     }
     else
     {
-        autoLock();
+        LsShmPoolLock lock(this);
         releaseData(offset, size);
         getDataMap()->x_stat.m_iPoolInUse -= size;
-        autoUnlock();
     }
 }
 
@@ -615,9 +602,8 @@ void LsShmPool::mvFreeList()
 {
     if (m_pParent != NULL)
     {
-        autoLock();
+        LsShmPoolLock lock(this);
         m_pParent->addFreeList(getDataMap());
-        autoUnlock();
     }
     return;
 }
@@ -628,7 +614,7 @@ void LsShmPool::addFreeList(LsShmPoolMap *pSrcMap)
     LsShmOffset_t listOffset;
     if ((listOffset = pSrcMap->x_iFreeList) != 0)
     {
-        autoLock();
+        LsShmPoolLock lock(this);
         LsShmFreeList *pFree;
         LsShmFreeList *pFreeList;
         LsShmOffset_t freeOffset;
@@ -652,7 +638,8 @@ void LsShmPool::addFreeList(LsShmPoolMap *pSrcMap)
         getDataMap()->x_iFreeList = listOffset;
         incrCheck(&getDataMap()->x_stat.m_iFlReleased, cnt);
         getDataMap()->x_stat.m_iFlCnt += pSrcMap->x_stat.m_iFlCnt;
-        autoUnlock();
+        // the source map belongs to the pool being drained, whose own lock
+        // the caller holds
         pSrcMap->x_iFreeList = 0;
         incrCheck(&pSrcMap->x_stat.m_iFlAllocated, cnt);
         pSrcMap->x_stat.m_iFlCnt = 0;
@@ -665,9 +652,8 @@ void LsShmPool::mvFreeBucket()
 {
     if (m_pParent != NULL)
     {
-        autoLock();
+        LsShmPoolLock lock(this);
         m_pParent->addFreeBucket(getDataMap());
-        autoUnlock();
     }
     return;
 }
@@ -678,7 +664,7 @@ void LsShmPool::addFreeBucket(LsShmPoolMap *pSrcMap)
     int num = 1;     // skip zero slot
     LsShmOffset_t *pSrc = &pSrcMap->x_aFreeBucket[1];
     LsShmOffset_t *pDst = &getDataMap()->x_aFreeBucket[1];
-    autoLock();
+    LsShmPoolLock lock(this);
     while (num < LSSHM_POOL_NUMBUCKET)
     {
         LsShmOffset_t bcktOffset;
@@ -707,7 +693,6 @@ void LsShmPool::addFreeBucket(LsShmPoolMap *pSrcMap)
         ++pDst;
         ++num;
     }
-    autoUnlock();
     return;
 }
 
@@ -902,7 +887,7 @@ LsShmOffset_t LsShmPool::allocFromGlobalBucket(
         return 0;
 
     LsShmSize_t cnt = 0;
-    autoLock();
+    LsShmPoolLock lock(this);
     np = &getDataMap()->x_aFreeBucket[bucketNum];
     next = first = *np;
     while (next != 0)
@@ -916,7 +901,6 @@ LsShmOffset_t LsShmPool::allocFromGlobalBucket(
     getDataMap()->x_aFreeBucket[bucketNum] = next;
     *np = 0;
     incrCheck(&getDataMap()->x_stat.m_bckt[bucketNum].m_iBkAllocated, cnt);
-    autoUnlock();
     num = cnt;
     return first;
 }
@@ -1351,8 +1335,7 @@ LsShmOffset_t LsShmPool::allocPage(LsShmSize_t pagesize)
     pagesize = roundPageSize(pagesize);
 
     LsShmPool *pPagePool = ((m_pParent != NULL) ? m_pParent : this);
-    if (m_pParent != NULL)
-        pPagePool->autoLock();
+    LsShmPoolLock lock(pPagePool);
     if ((offset = pPagePool->getFromFreeList(pagesize)) == 0)
     {
         if ((offset = m_pShm->allocPage(pagesize)) == 0)
@@ -1364,9 +1347,6 @@ LsShmOffset_t LsShmPool::allocPage(LsShmSize_t pagesize)
     incrCheck(&pPagePool->getDataMap()->x_stat.m_iGpAllocated,
         (pagesize / LSSHM_SHM_UNITSIZE));
 out:
-    if (m_pParent != NULL)
-        pPagePool->autoUnlock();
-
     return offset;
 }
 

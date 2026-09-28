@@ -90,7 +90,8 @@ static char *parseKey(char *&pPos, char *pLineEnd, int &keyLen)
         pKey = pPos;
         pKeyEnd = pValue;
         pPos = pValue + 1;
-        while (((ch = *(pKeyEnd - 1)) == ' ') || (ch == '\t'))
+        while (pKeyEnd > pKey
+              && (((ch = *(pKeyEnd - 1)) == ' ') || (ch == '\t')))
             --pKeyEnd;
         keyLen = pKeyEnd - pKey;
     }

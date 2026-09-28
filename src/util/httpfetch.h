@@ -141,6 +141,9 @@ public:
     static const char *getErrorStr(int error_code);
 
 private:
+#ifdef RUN_TEST
+    friend class HttpFetchTestPeer;
+#endif
     VMemBuf    *m_pBuf;
     int         m_fdHttp;
     int         m_statusCode;
@@ -151,6 +154,7 @@ private:
     int         m_reqHeaderLen;
     int         m_connTimeout;
     short       m_iHostLen;
+    short       m_iAuthorityLen;
     short       m_pollEvents;
     enum state  m_reqState:8;
     enum mode   m_nonblocking:8;
@@ -158,6 +162,7 @@ private:
     uint8_t     m_iEnableDebug;
     uint8_t     m_iSsl;
     uint8_t     m_iVerifyCert;
+    uint8_t     m_iHostOffset;
     uint8_t     m_family;
     const char *m_pReqBody;
     int64_t     m_reqBodyLen;

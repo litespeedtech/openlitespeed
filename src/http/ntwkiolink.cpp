@@ -48,6 +48,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -62,6 +63,10 @@
 #define NIOL_COUNTED          32
 #define NIOL_TRY_PROXY        64
 
+#define PROXY_PROTOCOL_ACCESS_DENIED -2
+//seconds allowed to complete a fragmented PROXY header
+#define PROXY_HEADER_TIMEOUT 10
+
 //#define HTTP2_PLAIN_DEV
 
 //#define SPDY_PLAIN_DEV
@@ -73,8 +78,8 @@ class NtwkIOLink::fp_list NtwkIOLink::s_normal
     (
         NtwkIOLink::readEx,
         NtwkIOLink::writevEx,
-        NtwkIOLink::onWrite,
-        NtwkIOLink::onRead,
+        NtwkIOLink::onWrite_,
+        NtwkIOLink::onRead_,
         NtwkIOLink::close_,
         NtwkIOLink::onTimer_
     );
@@ -434,6 +439,13 @@ int NtwkIOLink::handleEvents(short evt)
         {
             int ret = tryProtocolProxy();
             LS_DBG_M(this, "tryProtocolProxy() return %d", ret);
+            if (ret == PROXY_PROTOCOL_ACCESS_DENIED)
+            {
+                m_iFlag &= ~NIOL_TRY_PROXY;
+                setFlag(HIO_FLAG_ABORT, 1);
+                setState(HIOS_CLOSING);
+                goto skip_read;
+            }
             if (ret != 0)
             {
                 m_iFlag &=~NIOL_TRY_PROXY;
@@ -441,7 +453,12 @@ int NtwkIOLink::handleEvents(short evt)
                     setupHandler(HIOS_PROTO_HTTP);
             }
             else
+            {
+                //A partial header is only peeked, so a level-triggered
+                //poller would report it again at once. onTimer() resumes.
+                MultiplexerFactory::getMultiplexer()->suspendRead(this);
                 goto skip_read;
+            }
         }
         (*m_pFpList->m_onRead_fp)(this);
     }
@@ -480,8 +497,8 @@ int NtwkIOLink::UpdateClientInfoByProxyProto(const struct sockaddr *from,
                                              uint16_t from_port)
 {
     ClientInfo *pInfo = ClientCache::getInstance().getClientInfo(from);
-    if (!pInfo)
-        return 0;
+    if (!pInfo || pInfo->checkAccess())
+        return LS_FAIL;
     LS_DBG_L(getLogSession(),
              "[PROXY] update client address based on PROXY protocol to %s:%hu, access: %d",
              pInfo->getAddrString(), from_port, (int)pInfo->getAccess());
@@ -576,18 +593,24 @@ int NtwkIOLink::process_proxy_v1(char *line, char *end,
         return -1;
     p = p1 + 1;
 
+    if (p >= end || !isdigit((unsigned char)*p))
+        return -1;
     from_port = strtol(p, &p1, 10);
-    if (!p1 || p1 == p)
+    if (p1 == p || p1 >= end || *p1 != ' ')
         return -1;
     if (from_port < 0 || from_port > 65535)
         return -1;
     p = p1 + 1;
+    if (p >= end || !isdigit((unsigned char)*p))
+        return -1;
     to_port = strtol(p, &p1, 10);
-    if (!p1 || p1 == p)
+    if (p1 == p || p1 != end)
         return -1;
     if (to_port < 0 || to_port > 65535)
         return -1;
-    UpdateClientInfoByProxyProto((struct sockaddr *)from, from_port);
+    if (UpdateClientInfoByProxyProto((struct sockaddr *)from, from_port)
+        == LS_FAIL)
+        return PROXY_PROTOCOL_ACCESS_DENIED;
 
     return 1;
 }
@@ -612,14 +635,24 @@ int NtwkIOLink::tryProtocolProxy()
 
     if (ret == -1)
         return (errno == EAGAIN) ? 0 : -1;
+    if (ret == 0)
+        return -1;
 
-    if (ret >= 16 && memcmp(&hdr.v2, v2sig, 12) == 0
-        && (hdr.v2.ver_cmd & 0xF0) == 0x20)
+    if (ret < 12 && memcmp(&hdr.v2, v2sig, ret) == 0)
+        return 0;
+
+    if (ret >= 12 && memcmp(&hdr.v2, v2sig, 12) == 0)
     {
+        if (ret < 16)
+            return 0;
+        if ((hdr.v2.ver_cmd & 0xF0) != 0x20)
+            return -1;
         int dataLen = ntohs(hdr.v2.len);
         size = 16 + dataLen;
+        if (size > (int)sizeof(hdr))
+            return -1;
         if (ret < size)
-            return -1; /* truncated or too large header */
+            return 0;
 
         switch (hdr.v2.ver_cmd & 0xF)
         {
@@ -646,8 +679,10 @@ int NtwkIOLink::tryProtocolProxy()
                             ntohs(hdr.v2.addr.ip4.src_port),
                         GSockAddr::ntop((struct sockaddr *)&to, dst_addr, 80),
                             ntohs(hdr.v2.addr.ip4.dst_port));
-                    UpdateClientInfoByProxyProto((struct sockaddr *)&from,
-                            ntohs(hdr.v2.addr.ip4.src_port));
+                    if (UpdateClientInfoByProxyProto(
+                            (struct sockaddr *)&from,
+                            ntohs(hdr.v2.addr.ip4.src_port)) == LS_FAIL)
+                        return PROXY_PROTOCOL_ACCESS_DENIED;
                 }
                 goto done;
             case 0x21:  /* TCPv6 */
@@ -670,8 +705,10 @@ int NtwkIOLink::tryProtocolProxy()
                             ntohs(hdr.v2.addr.ip6.src_port),
                         GSockAddr::ntop((struct sockaddr *)&to, dst_addr, 80),
                             ntohs(hdr.v2.addr.ip6.dst_port));
-                    UpdateClientInfoByProxyProto((struct sockaddr *)&from,
-                            ntohs(hdr.v2.addr.ip6.src_port));
+                    if (UpdateClientInfoByProxyProto(
+                            (struct sockaddr *)&from,
+                            ntohs(hdr.v2.addr.ip6.src_port)) == LS_FAIL)
+                        return PROXY_PROTOCOL_ACCESS_DENIED;
                 }
                 goto done;
             }
@@ -686,17 +723,24 @@ int NtwkIOLink::tryProtocolProxy()
             return -1; /* not a supported command */
         }
     }
-    else if (ret >= 8 && memcmp(hdr.v1.line, "PROXY ", 6) == 0)
+    else if (ret < 6 && memcmp(hdr.v1.line, "PROXY ", ret) == 0)
+        return 0;
+    else if (ret >= 6 && memcmp(hdr.v1.line, "PROXY ", 6) == 0)
     {
         //"PROXY TCP4 255.255.255.255 255.255.255.255 65535 65535\r\n"
-        char *end = (char *)memchr(hdr.v1.line, '\r', ret - 1);
-        if (!end || end[1] != '\n')
-            return -1; /* partial or invalid header */
+        size_t peekLen = ret;
+        if (peekLen > sizeof(hdr.v1.line))
+            peekLen = sizeof(hdr.v1.line);
+        char *end = (char *)memchr(hdr.v1.line, '\r', peekLen - 1);
+        if (!end)
+            return (peekLen < sizeof(hdr.v1.line)) ? 0 : -1;
+        if (end[1] != '\n')
+            return -1;
         *end = '\0'; /* terminate the string to ease parsing */
         size = end + 2 - hdr.v1.line; /* skip header + CRLF */
         LS_DBG_M(this, "[PROXY] v1: '%.*s'", size, hdr.v1.line);
         ret = process_proxy_v1(hdr.v1.line + 6, end, &from, &to);
-        if (ret == -1)
+        if (ret < 0)
             return ret;
         /* parse the V1 header using favorite address parsers like inet_pton.
           * return -1 upon error, or simply fall through to accept.
@@ -1255,7 +1299,7 @@ void NtwkIOLink::closeSocket()
 }
 
 
-int NtwkIOLink::onRead(NtwkIOLink *pThis)
+int NtwkIOLink::onRead_(NtwkIOLink *pThis)
 {
     if (pThis->getHandler())
         return pThis->getHandler()->onReadEx();
@@ -1263,7 +1307,7 @@ int NtwkIOLink::onRead(NtwkIOLink *pThis)
 }
 
 
-int NtwkIOLink::onWrite(NtwkIOLink *pThis)
+int NtwkIOLink::onWrite_(NtwkIOLink *pThis)
 {
     return pThis->doWrite();
 }
@@ -1293,10 +1337,28 @@ void NtwkIOLink::enableSocketKeepAlive()
 }
 
 
+#ifdef RUN_TEST
+void NtwkIOLink::testTryProxyProtocol()
+{
+    m_iFlag |= NIOL_TRY_PROXY;
+}
+#endif
+
+
 int NtwkIOLink::onTimer()
 {
+    //peek a partial PROXY header again on every timer tick
+    if ((m_iFlag & NIOL_TRY_PROXY) && !(getEvents() & POLLIN))
+        MultiplexerFactory::getMultiplexer()->continueRead(this);
     if (matchToken(this->m_tmToken))
     {
+        if ((m_iFlag & NIOL_TRY_PROXY)
+            && DateTime::s_curTime - getActiveTime() >= PROXY_HEADER_TIMEOUT)
+        {
+            LS_DBG_L(this, "[PROXY] Header timed out, close connection.");
+            closeSocket();
+            return 1;
+        }
         if (this->hasBufferedData() && this->allowWrite())
             this->flush();
         /*
@@ -2317,4 +2379,3 @@ ThrottleControl *NtwkIOLink::getThrottleCtrl() const
 {
     return  &(getClientInfo()->getThrottleCtrl());
 }
-
