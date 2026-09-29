@@ -1410,6 +1410,23 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
 
         }
     }
+    else if (strcasecmp(pName, "path") == 0)
+    {
+        LS_WARN(pSession->getLogSession(),
+                "Unsafe environment: %s=%s. ignore.", pName, pValue);
+        return 0;
+    }
+    else if ((*pName | 0x20) == 'l')
+    {
+        if (strncasecmp(pName, "ls_", 3) == 0
+            || strncasecmp(pName, "ld_", 3) == 0
+            || strncasecmp(pName, "lsapi_", 6) == 0)
+        {
+            LS_WARN(pSession->getLogSession(),
+                    "Unsafe environment: %s=%s. ignore.", pName, pValue);
+            return 0;
+        }
+    }
 
     if (p)
         ls_mutex_lock(&p->m_respHeaderLock);
