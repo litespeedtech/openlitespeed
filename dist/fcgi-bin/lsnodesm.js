@@ -10,7 +10,9 @@ var http = require('http');
 var util = require('util');
 var net = require('net');
 
-var socketObject = { fd: 0 };
+var socketObject = process.env.LSNODE_BIND_SOCKET
+    ? { path: process.env.LSNODE_SOCKET }
+    : { fd: 0 };
 
 /*
  * Child process supervision.
@@ -37,9 +39,14 @@ var socketObject = { fd: 0 };
  */
 var PPID_ENV = 'LSNODE_GUARD_PPID';
 var PARENT_CHECK_INTERVAL = 1000;
+var LISTEN_SOCKET_CHECK_INTERVAL = 1000;
 var FORCE_KILL_DELAY = 3000;
 var children = [];
 var terminating = false;
+var signalHandlers = null;
+var signalDispatch = null;
+var updatingSignals = false;
+var signalUpdatePending = false;
 
 if (require.main !== module) {
     // Loaded with --require into a child process, act as the watchdog only.
@@ -72,13 +79,123 @@ function trackChild(child, detached) {
     }
     var entry = { child: child, detached: detached === true };
     children.push(entry);
-    child.on('exit', function() {
+    updateSignalHandlers();
+    function forget() {
         var idx = children.indexOf(entry);
         if (idx >= 0) {
             children.splice(idx, 1);
+            updateSignalHandlers();
         }
-    });
+    }
+    child.on('exit', forget);
+    // close also fires for a failed spawn that never emitted exit. Do not
+    // install an error listener: that would swallow otherwise unhandled errors.
+    child.on('close', forget);
     return child;
+}
+
+
+function updateSignalHandlers() {
+    // Catching a signal in javascript replaces the default disposition of
+    // dying immediately: the handler only runs once the event loop turns, so
+    // a process stuck in a synchronous call or a long computation no longer
+    // reacts to SIGTERM at all and the web server escalates to SIGKILL.
+    // Only pay that price while there are children to clean up, and give the
+    // default behavior back the moment the last child is gone.
+    var signals = { SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGTERM: 15 };
+    updatingSignals = true;
+    try {
+        if (children.length && !signalHandlers) {
+            signalHandlers = {};
+            Object.keys(signals).forEach(function(name) {
+                signalHandlers[name] = function() {
+                    // emit() snapshots the listeners BEFORE once/prependOnceListener
+                    // wrappers remove themselves. A later signal gets a fresh snapshot.
+                    var appOwned = signalDispatch && signalDispatch.name === name
+                        ? signalDispatch.appOwned
+                        : process.listenerCount(name) > 1;
+                    if (appOwned) {
+                        return;
+                    }
+                    // Exit with the conventional status; the exit hook signals children.
+                    // This is an explicit exit, not restoration of the OS disposition.
+                    process.exit(128 + signals[name]);
+                };
+            });
+        }
+        if (signalHandlers) {
+            Object.keys(signalHandlers).forEach(function(name) {
+                var handler = signalHandlers[name];
+                var listeners = process.listeners(name);
+                var installed = listeners.indexOf(handler) >= 0;
+                var appOwned = listeners.some(function(listener) {
+                    return listener !== handler;
+                });
+                // Bun's native signals can bypass process.emit. Avoid competing
+                // with application handlers, including once/prependOnceListener.
+                if (children.length && !appOwned) {
+                    if (!installed) {
+                        process.on(name, handler);
+                    }
+                } else if (installed) {
+                    process.removeListener(name, handler);
+                }
+            });
+            if (!children.length) {
+                signalHandlers = null;
+            }
+        }
+    } finally {
+        updatingSignals = false;
+    }
+}
+
+
+function observeSignalDispatch() {
+    function listenersChanged(name) {
+        if (updatingSignals || signalUpdatePending ||
+            ['SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGTERM'].indexOf(name) < 0) {
+            return;
+        }
+        signalUpdatePending = true;
+        // newListener runs before insertion. Defer changes until registration
+        // or the current once-handler dispatch has completed.
+        process.nextTick(function() {
+            signalUpdatePending = false;
+            updateSignalHandlers();
+        });
+    }
+    process.on('newListener', listenersChanged);
+    process.on('removeListener', listenersChanged);
+    // A narrow wrapper on this process, not EventEmitter.prototype. Delegate
+    // every event, argument, return value and exception to the previous emit.
+    // This must remain in the process.emit chain; code that replaces emit
+    // without delegating bypasses this observer and is not supported.
+    var emit = process.emit;
+    process.emit = function(name) {
+        var handler = this === process && signalHandlers &&
+            Object.prototype.hasOwnProperty.call(signalHandlers, name)
+            ? signalHandlers[name] : null;
+        if (!handler) {
+            return emit.apply(this, arguments);
+        }
+        var listeners = process.listeners(name);
+        var appOwned = false;
+        for (var i = 0; i < listeners.length; i++) {
+            if (listeners[i] !== handler) {
+                appOwned = true;
+                break;
+            }
+        }
+        var previous = signalDispatch;
+        signalDispatch = { name: name, appOwned: appOwned };
+        try {
+            return emit.apply(this, arguments);
+        } finally {
+            // Preserve the outer snapshot during nested synchronous emissions.
+            signalDispatch = previous;
+        }
+    };
 }
 
 
@@ -225,6 +342,8 @@ function superviseChildProcesses() {
         return;
     }
 
+    observeSignalDispatch();
+
     var cp = require('child_process');
     var origSpawn = cp.spawn;
     var origFork = cp.fork;
@@ -289,20 +408,8 @@ function superviseChildProcesses() {
     process.on('exit', function() {
         killChildren('SIGTERM');
     });
-
-    var signals = { SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGTERM: 15 };
-    Object.keys(signals).forEach(function(name) {
-        process.on(name, function() {
-            if (process.listenerCount(name) > 1) {
-                // The application installed its own handler, leave the
-                // shutdown to it, the 'exit' handler cleans up afterwards.
-                return;
-            }
-            // Restore the default behavior of dying on the signal, the 'exit'
-            // handler takes the children along.
-            process.exit(128 + signals[name]);
-        });
-    });
+    // Signal handlers are installed by updateSignalHandlers() when the first
+    // child appears and removed again with the last one, see there for why.
 }
 
 
@@ -310,24 +417,49 @@ function watchParent(ppid) {
     if (isKeepChildren() || !ppid) {
         return;
     }
-    var timer = setInterval(function() {
+    // The recorded pid is only meaningful in the parent's own pid namespace.
+    // When getppid() matches it, ppid-watching is trustworthy: any later
+    // change means the parent went away.  When it does not match at startup
+    // the situation is ambiguous -- an intermediate process or a namespace
+    // boundary (legitimate, keep running), OR the real parent already died
+    // and a subreaper adopted us (must terminate).  A plain pid comparison
+    // cannot tell these apart, and adopting the observed pid as the new
+    // reference would silently accept a subreaper as our parent.
+    //
+    // The fork() IPC channel resolves the ambiguity: it stays open while the
+    // real parent lives and closes ('disconnect') when it dies or calls
+    // disconnect().  This watchdog is only preloaded into fork() children, so
+    // the channel is normally present. We therefore trust ppid-watching only
+    // when the baseline matches, and otherwise rely on the channel. PID 1 can
+    // be a live container parent, and PID 0 can mean an invisible parent in
+    // another namespace; neither alone proves that the parent died.
+    var current = getParentPid();
+    var trustPpid = (current === ppid);
+    var timer;
+    function checkParent() {
         var currentPpid = getParentPid();
-        if (currentPpid && currentPpid !== ppid) {
-            terminateSelf();
+        var gone = trustPpid
+            ? (currentPpid && currentPpid !== ppid)
+            : (process.connected !== true);
+        if (!gone) {
+            return;
         }
-    }, PARENT_CHECK_INTERVAL);
+        if (timer) {
+            clearInterval(timer);
+        }
+        process.removeListener('disconnect', checkParent);
+        terminateSelf();
+    }
+    // With a matching PPID, deliberate IPC disconnect is harmless and polling
+    // still detects parent death. With an ambiguous PPID, IPC must remain open:
+    // absent/already closed IPC is not proof of a live parent. This deliberately
+    // requires keeping IPC open in ambiguous setups.
+    process.on('disconnect', checkParent);
+    timer = setInterval(checkParent, PARENT_CHECK_INTERVAL);
     if (typeof timer.unref === 'function') {
         timer.unref();
     }
-    // A dead parent closes the fork() IPC channel.  Applications may also call
-    // disconnect() deliberately, so only terminate if the OS parent changed.
-    // If re-parenting has not completed yet, the interval catches it shortly.
-    process.on('disconnect', function() {
-        var currentPpid = getParentPid();
-        if (currentPpid && currentPpid !== ppid) {
-            terminateSelf();
-        }
-    });
+    checkParent();
 }
 
 
@@ -347,6 +479,61 @@ function terminateSelf() {
         killChildren('SIGKILL');
         process.exit(0);
     }, FORCE_KILL_DELAY);
+}
+
+
+function watchListeningSocket(path, boundSelf) {
+    // A Unix-domain listener remains open after its directory entry is
+    // unlinked.  A replacement listener also gets a different inode.  In both
+    // cases this process is no longer the one LiteSpeed reaches by path, so do
+    // not leave it serving inherited connections or consuming resources.
+    var noWatch = process.env.LSNODE_NO_SOCKET_WATCH;
+    if (noWatch !== undefined && noWatch !== '' && noWatch !== '0') {
+        return;
+    }
+    var expected;
+    try {
+        expected = fs.lstatSync(path);
+    } catch (err) {
+        // In app-bind mode the socket was just created at this path, a
+        // failure here is real.  With an inherited listener the path belongs
+        // to the web server and may not be visible from this process at all
+        // (a different mount namespace, for one); that is not a reason to
+        // die, it only means nothing useful can be watched.
+        if (boundSelf) {
+            terminateSelf();
+        }
+        return;
+    }
+    if (!expected.isSocket()) {
+        if (boundSelf) {
+            terminateSelf();
+        }
+        return;
+    }
+    var timer = setInterval(function() {
+        var current;
+        try {
+            current = fs.lstatSync(path);
+        } catch (err) {
+            // Permission changes and transient I/O failures do not establish
+            // that the listener was removed. Retry those on the next tick.
+            if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
+                return;
+            }
+            clearInterval(timer);
+            terminateSelf();
+            return;
+        }
+        if (!current.isSocket() || current.dev !== expected.dev ||
+            current.ino !== expected.ino) {
+            clearInterval(timer);
+            terminateSelf();
+        }
+    }, LISTEN_SOCKET_CHECK_INTERVAL);
+    if (typeof timer.unref === 'function') {
+        timer.unref();
+    }
 }
 
 
@@ -403,7 +590,18 @@ function lsnode_address() {
 
 function customListen(port) {
     function onListenError(error) {
+        restoreBindMask();
         server.emit('error', error);
+    }
+    function restoreBindMask() {
+        // Idempotent, listen() may fail synchronously, asynchronously, or not
+        // at all; the mask must go back exactly once in every case, an
+        // application that handles the error keeps running with it otherwise.
+        if (lsBindMask !== undefined) {
+            var mask = lsBindMask;
+            lsBindMask = undefined;
+            process.umask(mask);
+        }
     }
     // The replacement for the listen call!
     var server = this;
@@ -436,12 +634,46 @@ function customListen(port) {
         callback = arguments[arguments.length - 1];
     }
     server.once('error', onListenError);
-    server.realListen(socketObject, function() {
-        server.removeListener('error', onListenError);
-        if (callback) {
-            server.once('listening', callback);
-        }
-        server.emit('listening');
-    });
+    var lsBindMask;
+    var lsBindPath = process.env.LSNODE_BIND_SOCKET
+        ? process.env.LSNODE_SOCKET : null;
+    if (lsBindPath) {
+        // The application owns and binds the unix socket; LiteSpeed connects to
+        // it by path. Remove any stale socket from a previous run, and bind
+        // under a umask that makes it group-writable (0660) so the web server
+        // worker -- which shares the socket's group via the set-gid directory --
+        // can connect.
+        try { fs.unlinkSync(lsBindPath); } catch (e) {}
+        lsBindMask = process.umask(0o117);
+    }
+    try {
+        server.realListen(socketObject, function() {
+            if (lsBindPath) {
+                // bind() applied the mask above, this covers the socket being
+                // created after it was restored, and is a no-op otherwise.
+                try { fs.chmodSync(lsBindPath, 0o660); } catch (e) {}
+                restoreBindMask();
+            }
+            // Inherited-fd and app-bind listeners are both reached through
+            // LSNODE_SOCKET. Stop if its pathname no longer refers to this
+            // listener, regardless of how the listener was obtained.
+            if (process.env.LSNODE_SOCKET) {
+                watchListeningSocket(process.env.LSNODE_SOCKET,
+                                     lsBindPath !== null);
+            }
+            server.removeListener('error', onListenError);
+            if (callback) {
+                callback.call(server);
+            }
+        });
+    } catch (err) {
+        restoreBindMask();
+        throw err;
+    }
+    // Binding a unix socket finishes inside listen(), so the mask has done its
+    // job by the time it returns.  Restore it here rather than from the
+    // callback above: node emits 'listening' to the application's own handlers
+    // first, and those must not run under our mask.
+    restoreBindMask();
     return server;
 }

@@ -17,6 +17,20 @@ if(UNIX AND OLS_NODE_EXECUTABLE)
             ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnode.js
             ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnodesm.js)
     set_tests_properties(node_runner_child_supervision PROPERTIES TIMEOUT 45)
+
+    add_test(NAME node_runner_bind_socket
+        COMMAND ${OLS_NODE_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/nodejsrunnerbindsockettest.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnode.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnodesm.js)
+    set_tests_properties(node_runner_bind_socket PROPERTIES TIMEOUT 45)
+
+    add_test(NAME node_runner_regressions
+        COMMAND ${OLS_NODE_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/nodejsrunnerregressiontest.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnode.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnodesm.js)
+    set_tests_properties(node_runner_regressions PROPERTIES TIMEOUT 45)
 endif()
 
 # The unit-test binaries link every module statically (prelinkedmods) and never
