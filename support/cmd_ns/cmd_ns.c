@@ -276,8 +276,8 @@ done_opts:
         ls_stderr("ns_init_engine disabled namespaces\n");
         return 1;
     }
-    if (vhost)
-        nspersist_setvhost(vhost);
+    if (vhost && nspersist_setvhost(vhost))
+        return 1;
     lscgid_t cgi;
     memset(&cgi, 0, sizeof(cgi));
     char systemd_start[128];
@@ -324,7 +324,7 @@ done_opts:
     }
     int done = 0;
     rc = ns_exec(&cgi, must_exist, &done);
-    ns_done(0);
+    ns_done();
     free(a);
     if (rc)
     {

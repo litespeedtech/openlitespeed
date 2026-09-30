@@ -35,6 +35,8 @@
 #include <sslpp/sslcontext.h>
 #include <sslpp/sslerror.h>
 
+#include <stdint.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 
 
@@ -132,22 +134,38 @@ int ProxyConn::connectSSL()
         m_ssl->setfd(getfd());
         HttpReq *pReq = getConnector()->getHttpSession()->getReq();
         char *pHostName;
-        int hostLen = pReq->getNewHostLen();
-        if (hostLen > 0)
+        int authorityLen = pReq->getNewHostLen();
+        int hostLen;
+        if (authorityLen > 0)
+        {
+            hostLen = pReq->getNewHostNameLen();
+            if (hostLen <= 0)
+                return LS_FAIL;
             pHostName = (char *)pReq->getNewHost();
+        }
         else
         {
-            pHostName = (char *)pReq->getHeader(HttpHeader::H_HOST);
-            hostLen = pReq->getHeaderLen(HttpHeader::H_HOST);
+            pHostName = (char *)pReq->getHostStr();
+            hostLen = pReq->getHostStrLen();
         }
-        if (pHostName)
+        if (pHostName && hostLen > 0)
         {
             char ch = *(pHostName + hostLen);
             *(pHostName + hostLen) = 0;
-            m_ssl->setTlsExtHostName(pHostName);
+            struct in_addr ipv4;
+            bool isIpLiteral = *pHostName == '['
+                               || inet_pton(AF_INET, pHostName, &ipv4) == 1;
+            if (!isIpLiteral)
+            {
+                if (m_ssl->setTlsExtHostName(pHostName) != 1)
+                {
+                    *(pHostName + hostLen) = ch;
+                    return LS_FAIL;
+                }
+                m_ssl->tryReuseCachedSession(pHostName, hostLen);
+            }
             *(pHostName + hostLen) = ch;
         }
-        m_ssl->tryReuseCachedSession(pHostName, hostLen);
     }
     int ret = m_ssl->connect();
     switch (ret)
@@ -251,6 +269,11 @@ int ProxyConn::sendReqHeader()
     m_iovec.clear();
     HttpSession *pSession = getConnector()->getHttpSession();
     HttpReq *pReq = pSession->getReq();
+    if (!pReq->getContextState(LSCACHE_FRONTEND))
+    {
+        pReq->dropUnknownReqHeader("X-LSCACHE", 9);
+        pReq->dropUnknownReqHeader("X-LITEMAGE", 10);
+    }
     const char *pBegin = pReq->getOrgReqLine();
     m_iTotalPending = pReq->getHttpHeaderLen();
     int newReqLineLen = 0;
@@ -287,20 +310,24 @@ int ProxyConn::sendReqHeader()
     }
 #endif
 
-    //reconstruct request line if URL has been rewritten
-    if (pReq->getRedirects() > 0)
+    //Reconstruct rewritten targets and strip absolute-form authority before
+    //forwarding to an origin backend.
+    const char *pReqLine = pReq->encodeProxyReqLine(newReqLineLen);
+    if (newReqLineLen == LS_FAIL)
+        return LS_FAIL;
+    if (newReqLineLen > 0)
     {
-        const char *pReqLine = pReq->encodeReqLine(newReqLineLen);
-        if (newReqLineLen > 0)
-        {
-            m_iovec.append(pReqLine, newReqLineLen);
-            pBegin += pReq->getOrgReqLineLen() - 9;
-            m_iTotalPending -= pReq->getOrgReqLineLen() - 9;
-        }
-
+        m_iovec.append(pReqLine, newReqLineLen);
+        pBegin += pReq->getOrgReqLineLen() - 9;
+        m_iTotalPending -= pReq->getOrgReqLineLen() - 9;
     }
 
     int newHostLen = pReq->getNewHostLen();
+    if (newHostLen > 0 && !pReq->isNewHostValid())
+    {
+        LS_WARN(this, "Refusing invalid proxy Host authority.");
+        return LS_FAIL;
+    }
     char *pHost = (char *)pReq->getHeader(HttpHeader::H_HOST);
     int hostLen = pReq->getHeaderLen(HttpHeader::H_HOST);
     if (newHostLen > 0)
@@ -613,15 +640,17 @@ int ProxyConn::doRead()
     }
     m_flag |= PCF_IN_DO_READ;
     ret = processResp();
+    m_flag &= ~PCF_IN_DO_READ;
     if (getState() == ABORT)
     {
-        if (getConnector())
+        HttpExtConnector *pHEC = getConnector();
+        if (pHEC)
         {
             incReqProcessed();
-            getConnector()->endResponse(0, 0);
+            pHEC->endResponse(0, 0);
+            return 0;
         }
     }
-    m_flag &= ~PCF_IN_DO_READ;
     return ret;
 }
 

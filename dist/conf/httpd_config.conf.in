@@ -74,7 +74,7 @@ tuning{
     gzipMinFileSize              300 
     
     quicEnable                   1
-    quicShmDir                   /dev/shm
+    quicShmDir                   /dev/shm/ols
     
 }
 

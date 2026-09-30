@@ -108,7 +108,7 @@ typedef v2_comp                 LsShmValComp_fn;
 #define LSSHM_VER_TYPE          \
     (((sizeof(LsShmOffset_t)<<4) | sizeof(LsShmXSize_t)) & (0xff)) // 8 bits
 
-#define LSSHM_PAGESIZE          0x4000  // lower bound only, see ls_shm_pagesize()
+#define LSSHM_PAGESIZE          0x4000  // lower bound for SHM page size
 #define LSSHM_MAXNAMELEN        12      // only 11 characters.
 
 /* SHM file offsets end up as the mmap() offset argument, which the kernel

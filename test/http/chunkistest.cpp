@@ -216,11 +216,41 @@ static void testInvalidChunkSize()
     {
         "4g\r\nqqqq\r\n"
     };
+    const char *test6[] =
+    {
+        "0x4\r\nqqqq\r\n"
+    };
+    const char *test7[] =
+    {
+        "+4\r\nqqqq\r\n"
+    };
+    const char *test8[] =
+    {
+        "4 nope\r\nqqqq\r\n"
+    };
+    const char *test9[] =
+    {
+        "7fffffff\r\n"
+    };
+    const char *test10[] =
+    {
+        " 4\r\nqqqq\r\n"
+    };
+    const char *test11[] =
+    {
+        "4 \r\nqqqq\r\n"
+    };
     shouldInvalidChunkNum(test1, sizeof(test1) / sizeof(char *));
     shouldInvalidChunkNum(test2, sizeof(test2) / sizeof(char *));
     shouldInvalidChunkNum(test3, sizeof(test3) / sizeof(char *));
     shouldInvalidChunkNum(test4, sizeof(test4) / sizeof(char *));
     shouldInvalidChunkNum(test5, sizeof(test5) / sizeof(char *));
+    shouldInvalidChunkNum(test6, sizeof(test6) / sizeof(char *));
+    shouldInvalidChunkNum(test7, sizeof(test7) / sizeof(char *));
+    shouldInvalidChunkNum(test8, sizeof(test8) / sizeof(char *));
+    shouldInvalidChunkNum(test9, sizeof(test9) / sizeof(char *));
+    shouldInvalidChunkNum(test10, sizeof(test10) / sizeof(char *));
+    shouldInvalidChunkNum(test11, sizeof(test11) / sizeof(char *));
 }
 
 static void shouldInvalidChunkLen(const char *const *data, int array_len,
@@ -276,7 +306,7 @@ static void testSuccess()
         "5", "\r", "\n",
         "H", "e", "l", "l", "o", "\r", "\n",
         "6\r", "\n", " W", "or", "ld", "\r\n",
-        "  0  \r\n\r\n"
+        "0\r\n\r\n"
     };
 
     const char *test4[] =
@@ -285,7 +315,7 @@ static void testSuccess()
         "H\r\n",
         "1\r\n",
         "e\r\n",
-        "2 \r\n",
+        "2\r\n",
         "ll\r\n",
         "1\r\n",
         "o", "\r", "\n",
@@ -306,5 +336,103 @@ TEST(ChunkISTesttest)
     testInvalidChunkLen();
 }
 
-#endif
+TEST(ChunkISTest_requireCrLfFraming)
+{
+    const char *invalid[] =
+    {
+        "1\nA\r\n0\r\n\r\n",
+        "1\r\nA\n0\r\n\r\n",
+        "1\r\nA\r\n0\r\nX-Test: value\n\r\n",
+        "1\r\nA\r\n0\r\nX-One: a\nX-Two: b\r\n\r\n",
+        "1\r\nA\r\n0\r\n\n",
+        "1;x=\rY\r\nA\r\n0\r\n\r\n",
+        "1;x=\177\r\nA\r\n0\r\n\r\n"
+    };
+    for (unsigned i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
+    {
+        TestIS testIS;
+        testIS.addData(invalid[i], strlen(invalid[i]));
+        ChunkInputStream chunkIS;
+        chunkIS.setStream(&testIS);
+        chunkIS.open();
 
+        char buf[8];
+        int len = sizeof(buf);
+        readTillFail(chunkIS, buf, len);
+        CHECK(!chunkIS.eos());
+        CHECK(chunkIS.fail());
+    }
+}
+
+TEST(ChunkISTest_rejectChunkSizeOverflowingRemain)
+{
+    const char *invalid[] = { "7ffffffe\r\n", "7fffffff\r\n" };
+    for (unsigned i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
+    {
+        TestIS testIS;
+        testIS.addData(invalid[i], strlen(invalid[i]));
+        ChunkInputStream chunkIS;
+        chunkIS.setStream(&testIS);
+        chunkIS.open();
+
+        char buf[8];
+        int len = sizeof(buf);
+        readTillFail(chunkIS, buf, len);
+        CHECK(chunkIS.fail());
+    }
+
+    const char largest[] = "7ffffffd\r\n";
+    TestIS testIS;
+    testIS.addData(largest, sizeof(largest) - 1);
+    testIS.addData("", 0);  //no chunk data available yet
+    ChunkInputStream chunkIS;
+    chunkIS.setStream(&testIS);
+    chunkIS.open();
+
+    char buf[8];
+    chunkIS.read(buf, sizeof(buf));
+    CHECK(!chunkIS.fail());
+    CHECK_EQUAL(0x7ffffffd, chunkIS.getChunkLen());
+}
+
+TEST(ChunkISTest_rejectOversizedTrailer)
+{
+    std::string encoded("0\r\nX-Trailer: ");
+    encoded.append(MAX_CHUNK_TRAILER_SIZE + 1, 'a');
+    encoded.append("\r\n\r\n");
+
+    TestIS testIS;
+    testIS.addData(encoded.data(), encoded.size());
+    ChunkInputStream chunkIS;
+    chunkIS.setStream(&testIS);
+    chunkIS.open();
+
+    char buf[1];
+    CHECK_EQUAL(LS_FAIL, chunkIS.read(buf, sizeof(buf)));
+    CHECK(chunkIS.fail());
+}
+
+TEST(ChunkISTest_preserveBytesAfterTrailers)
+{
+    const char *encoded[] =
+    {
+        "0\r\n\r\nNEXT",
+        "0\r\nX-Trailer: value\r\n\r\nNEXT"
+    };
+    for (unsigned i = 0; i < sizeof(encoded) / sizeof(encoded[0]); ++i)
+    {
+        TestIS testIS;
+        testIS.addData(encoded[i], strlen(encoded[i]));
+        ChunkInputStream chunkIS;
+        chunkIS.setStream(&testIS);
+        chunkIS.open();
+
+        char output[1];
+        CHECK_EQUAL(0, chunkIS.read(output, sizeof(output)));
+        CHECK(chunkIS.eos());
+        CHECK_EQUAL(4, chunkIS.getBufSize());
+        CHECK_EQUAL(0, memcmp("NEXT", chunkIS.getChunkLenBuf(), 4));
+    }
+}
+
+#endif

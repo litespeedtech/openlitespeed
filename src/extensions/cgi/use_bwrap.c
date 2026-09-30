@@ -19,12 +19,14 @@
 #include "lscgid.h"
 #include "ns.h"     // For ns_debug_init()
 #include "nsopts.h" // For DEBUG_MESSAGE
+#include "rootcheck.h"
 #include "use_bwrap.h"
 #include <ctype.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -365,7 +367,15 @@ static int bwrap_copy(lscgid_t *pCGI, int try, char *begin_param, char *wildcard
         return 0;
     }
     DEBUG_MESSAGE("Copy final source: %s, final target: %s\n", source, target);
-    fd = open(source, O_RDONLY);
+    if (geteuid() == 0 && check_root_protected_file(source))
+    {
+        set_cgi_error("Refusing unprotected root copy source", source);
+        close(data[0]);
+        close(data[1]);
+        (*argc) -= 3;
+        return -1;
+    }
+    fd = open(source, O_RDONLY | O_CLOEXEC);
     if (fd == -1)
     {
         int err = errno;
@@ -775,8 +785,9 @@ int bwrap_exec(lscgid_t *pCGI, int argc, char *argv[], int *done)
             DEBUG_MESSAGE("argv[%d] = %s\n", i, argv[i]);
         }
     }
-    if (apply_rlimits_uid_chroot_stderr(pCGI) == 403)
-        return 403;
+    int apply_rc = apply_rlimits_uid_chroot_stderr(pCGI);
+    if (apply_rc)
+        return apply_rc;
 
     if (execve(argv[0], argv, pCGI->m_env) == -1)
     {
@@ -788,6 +799,26 @@ int bwrap_exec(lscgid_t *pCGI, int argc, char *argv[], int *done)
     }
     *done = 1;
     return 0;
+}
+
+
+static int bwrap_exec_root_checked(lscgid_t *pCGI, int argc, char *argv[],
+                                   int *done)
+{
+    char bwrap_path[PATH_MAX];
+    int rc;
+
+    if (strlen(argv[0]) >= sizeof(bwrap_path))
+    {
+        errno = ENAMETOOLONG;
+        set_cgi_error("bwrap: executable path is too long", argv[0]);
+        return 500;
+    }
+    strcpy(bwrap_path, argv[0]);
+    rc = check_root_executable(bwrap_path);
+    if (rc)
+        return rc;
+    return bwrap_exec(pCGI, argc, argv, done);
 }
 
 
@@ -831,7 +862,10 @@ int exec_using_bwrap(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *done)
     rc = build_bwrap_exec(pCGI, cgi_error, &argc, &argv, done, &mem);
     if (rc || *done)
         return rc;
-    rc = bwrap_exec(pCGI, argc, argv, done);
+    if (geteuid() == 0 && pCGI->m_data.m_uid == 0)
+        rc = bwrap_exec_root_checked(pCGI, argc, argv, done);
+    else
+        rc = bwrap_exec(pCGI, argc, argv, done);
     bwrap_free(&mem);
     return rc;
 }
@@ -839,5 +873,3 @@ int exec_using_bwrap(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *done)
 
 
 #endif
-
-

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0...3.23)
 
 #include_directories("/usr/lib64/glib-2.0/include")
 #include_directories("/usr/include/glib-2.0")
@@ -6,6 +6,7 @@ cmake_minimum_required(VERSION 3.0)
 ########### next target ###############
 
 SET(cgi_STAT_SRCS
+   blake2b.c
    suexec.cpp
    cgidreq.cpp
    cgidconfig.cpp
@@ -20,6 +21,7 @@ SET(cgi_STAT_SRCS
    nspersist.c
    nsutils.c
    use_bwrap.c
+   rootcheck.c
 )
 
 add_library(cgi STATIC ${cgi_STAT_SRCS})

@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2026
+ * @copyright (c) 2018-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -451,8 +451,14 @@ class Plesk extends ControlPanel
             if ( $output !== null ) {
                 $candidate = trim($output);
 
+                /**
+                 * Anchored with '\z', not '$', which also matches
+                 * immediately before a trailing newline. trim() above
+                 * already strips one here, and the value reaches the shell
+                 * via escapeshellarg(), so this is defense in depth.
+                 */
                 if ( $candidate !== ''
-                        && preg_match('#^/[A-Za-z0-9_./\-]+$#', $candidate)
+                        && preg_match('#^/[A-Za-z0-9_./\-]+\z#', $candidate)
                         && is_file($candidate)
                         && is_executable($candidate) ) {
 

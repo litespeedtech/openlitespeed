@@ -1,9 +1,10 @@
 #! /bin/sh
 
-LSUPVERSION=v2.84-04/12/2024
-LOCKFILE=/tmp/olsupdatingflag
+LSUPVERSION=v2.85-09/26/2026
 
 PIDFILE=/tmp/lshttpd/lshttpd.pid
+
+umask 022
 
 CURDIR=`dirname "$0"`
 cd $CURDIR
@@ -18,6 +19,16 @@ if [ ! -f ${LSWSHOME}/bin/openlitespeed ] ; then
     LSWSHOME=/usr/local/lsws
 fi
 LSWSCTRL=${LSWSHOME}/bin/lswsctrl
+UPDATE_DIR=${LSWSHOME}/admin/update
+if [ -L "${UPDATE_DIR}" ] || [ -e "${UPDATE_DIR}" -a ! -d "${UPDATE_DIR}" ] ; then
+    echo "Error: ${UPDATE_DIR} must be a directory, not a symbolic link."
+    exit 1
+fi
+if [ ! -d "${UPDATE_DIR}" ] && ! mkdir -m 0700 "${UPDATE_DIR}" ; then
+    echo "Error: cannot create update directory ${UPDATE_DIR}."
+    exit 1
+fi
+LOCKFILE=${LSWSHOME}/admin/lsup.lock
 
 #the lsws_env may change the PID file location
 if [ -f "${LSWSHOME}"/lsws_env ] ; then
@@ -137,7 +148,7 @@ if [ $? != 0 ] ; then
         if [ "x$OSNAME" = "xFreeBSD" ] ; then
             which fetch >/dev/null 2>&1
             if [ $? = 0 ] ; then
-                DLCMD="fetch -o"
+                DLCMD="fetch -A -o"
             else
                 echoR "It seems you do not have 'wget', 'curl' and 'fetch' installed, please install one first and try again."
                 exit 1
@@ -147,35 +158,54 @@ if [ $? != 0 ] ; then
             exit 1
         fi
     else
-        DLCMD="curl -L -k -o"
+        DLCMD="curl -fL --proto =https --proto-redir =https -o"
     fi
 else
-    DLCMD="wget -nv -O"
+    #wget --https-only only applies to recursive downloads, and wget can
+    #not restrict redirects to https, so refuse redirects instead.
+    DLCMD="wget --max-redirect=0 -nv -O"
 fi
 
+#A lock file touched within the last 5 minutes means another lsup.sh is
+#running; an older one is left over from an interrupted run.
+if [ -n "`find "${LOCKFILE}" -mmin -5 2>/dev/null`" ] ; then
+    echoR "Another lsup.sh is running (${LOCKFILE} is less than 5 minutes old), quit."
+    exit 1
+fi
+touch "${LOCKFILE}"
+trap 'rm -f "${LOCKFILE}"' EXIT
+
 #Update lsup.sh itself
-$DLCMD ${LSWSHOME}/admin/misc/lsup.shnew https://raw.githubusercontent.com/litespeedtech/openlitespeed/master/dist/admin/misc/lsup.sh >/dev/null 2>&1
-if [ $? = 0 ] ; then
-    diff ${LSWSHOME}/admin/misc/lsup.shnew ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
+LSUPNEW=${UPDATE_DIR}/lsup.shnew
+$DLCMD "${LSUPNEW}" https://raw.githubusercontent.com/litespeedtech/openlitespeed/master/dist/admin/misc/lsup.sh >/dev/null 2>&1
+if [ $? = 0 ] && chmod 0755 "${LSUPNEW}" >/dev/null 2>&1 ; then
+    diff "${LSUPNEW}" "${LSWSHOME}/admin/misc/lsup.sh" >/dev/null 2>&1
     if [ $? != 0 ] ; then
-        mv -f ${LSWSHOME}/admin/misc/lsup.sh ${LSWSHOME}/admin/misc/lsup.shold >/dev/null 2>&1
-        mv -f ${LSWSHOME}/admin/misc/lsup.shnew ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
-        chmod 777 ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
+        mv -f "${LSWSHOME}/admin/misc/lsup.sh" "${LSWSHOME}/admin/misc/lsup.shold" >/dev/null 2>&1
+        chmod 0755 "${LSWSHOME}/admin/misc/lsup.shold" >/dev/null 2>&1
+        mv -f "${LSUPNEW}" "${LSWSHOME}/admin/misc/lsup.sh" >/dev/null 2>&1
+        chmod 0755 "${LSWSHOME}/admin/misc/lsup.sh" >/dev/null 2>&1
         echoG "lsup.sh (Version ${LSUPVERSION}) updated, now start new one."
-        exec ${LSWSHOME}/admin/misc/lsup.sh "$@"
+        #the new copy takes the lock again
+        rm -f "${LOCKFILE}"
+        exec "${LSWSHOME}/admin/misc/lsup.sh" "$@"
         exit 10
     else
-        rm ${LSWSHOME}/admin/misc/lsup.shnew
+        rm "${LSUPNEW}"
     fi
+else
+    rm -f "${LSUPNEW}"
 fi
 
 if [ -f ${LSWSHOME}/autoupdate/release ] ; then 
     NEWVERSION=`cat ${LSWSHOME}/autoupdate/release`
 else
     if [ "x${NEWVERSION}" = "x" ] ; then
-        $DLCMD /tmp/tmprelease https://openlitespeed.org/packages/release >/dev/null 2>&1
-        NEWVERSION=`cat /tmp/tmprelease`
-        rm /tmp/tmprelease
+        TMPRELEASE=${UPDATE_DIR}/release
+        if $DLCMD "${TMPRELEASE}" https://openlitespeed.org/packages/release >/dev/null 2>&1 ; then
+            NEWVERSION=`cat "${TMPRELEASE}"`
+        fi
+        rm -f "${TMPRELEASE}"
     fi
 fi
 if [ "x${NEWVERSION}" = "x" ] ; then
@@ -201,8 +231,7 @@ toggle()
     fi
     
     if [ "x$FPID" = "x" ] ; then
-        FPID=`ps  -ef > /tmp/testpid ; cat /tmp/testpid | grep 'lshttpd - main' | awk '{printf "%d ", $2}'`
-        rm /tmp/testpid
+        FPID=`ps -ef | awk '/[l]shttpd - main/ {printf "%d ", $2}'`
         if [ "x$FPID" = "x" ] ; then
             echoR Can not find pid file [$PIDFILE] or running openlitespeed, toggle DEBUG failed.
             exit 2
@@ -213,8 +242,7 @@ toggle()
     kill -0 $FPID 2>/dev/null
     if [ $? = 0 ] ; then
         #PIDLIST=`pgrep -P $FPID -a | grep lshttpd | awk '{printf "%d ", $1}'`
-        PIDLIST=`ps  -ef > /tmp/testpid ; cat /tmp/testpid | grep 'lshttpd - #' | awk '{printf "%d ", $2}'`
-        rm /tmp/testpid
+        PIDLIST=`ps -ef | awk '/[l]shttpd - #/ {printf "%d ", $2}'`
         echoG Debug log toggled to all children processes [ $PIDLIST].
         kill -USR2 $PIDLIST
     else
@@ -256,7 +284,6 @@ status()
 
 clean()
 {
-    rm -rf ${LOCKFILE}
     status
     stopService
     rm -rf /tmp/lshttpd/*
@@ -287,10 +314,7 @@ changeAdminPasswd()
 testCurrentStatus()
 {
     status
-    if [ -f ${LOCKFILE} ] ; then
-        echoG "Openlitespeed is updating ...."
-    fi
-    
+
     echoG Checking error log ...
     cat ${LSWSHOME}/logs/error.log | grep ERROR 
     if [ $? = 0 ] ; then
@@ -445,32 +469,59 @@ if [ "x${VERSION}" = "x" ] ; then
     echoR "Can not get the right version for installation, quit."
     exit 6
 fi
+case "${VERSION}" in
+    *[!0-9.]* | .* | *. | *..*)
+        echoR "Invalid OpenLiteSpeed version '${VERSION}', quit."
+        exit 6
+        ;;
+esac
 
-
-if [ -f ${LOCKFILE} ] ; then
-    FILETIME=`stat -c %Y  ${LOCKFILE}`
-    SYSTEMTIME=`date -u +%s`
-    COMSYSTEMTIME=$(($SYSTEMTIME-600))
-    #echoY ${LOCKFILE} exists, timestamp is $FILETIME, current time is $SYSTEMTIME( $COMSYSTEMTIME + 600 seconds)
-    if [ $COMSYSTEMTIME -gt $FILETIME ] ; then
-        echoG "${LOCKFILE} exists, timestamp is $FILETIME, current time is $SYSTEMTIME, removed it."
-        rm -rf ${LOCKFILE}
+verify_package_sha256()
+{
+    read LSUP_EXPECTED_SHA256 LSUP_CHECKSUM_NAME < "$2" || return 1
+    if [ "x${OSNAME}" = "xFreeBSD" ] ; then
+        LSUP_ACTUAL_SHA256=`sha256 -q "$1"` || return 1
     else
-        echoR "Openlitespeed is updating, quit. (You may run -c to remove the lock file and try again.)"
-        exit 0
+        LSUP_SHA256_OUTPUT=`sha256sum "$1"` || return 1
+        LSUP_ACTUAL_SHA256=${LSUP_SHA256_OUTPUT%% *}
     fi
-fi
+    [ "x${LSUP_ACTUAL_SHA256}" = "x${LSUP_EXPECTED_SHA256}" ]
+}
 
-touch ${LOCKFILE}
+download_package()
+{
+    LSUP_PACKAGE_URL=$1
+    rm -f ols.tgz ols.tgz.sha256
+    if ! $DLCMD ols.tgz "${LSUP_PACKAGE_URL}" ; then
+        rm -f ols.tgz ols.tgz.sha256
+        return 1
+    fi
+    LSUP_PACKAGE_SIZE=`wc -c < ols.tgz` || LSUP_PACKAGE_SIZE=0
+    if [ "${LSUP_PACKAGE_SIZE}" -lt ${testsz} ] ; then
+        rm -f ols.tgz ols.tgz.sha256
+        return 1
+    fi
 
-TEMPPATH=${LSWSHOME}/autoupdate
-if [ ! -e ${TEMPPATH} ] ; then
-    TEMPPATH=/usr/src
-fi
-cd ${TEMPPATH}
-if [ -f ols.tgz ] ; then
-    rm -f ols.tgz
-fi
+    LSUP_CHECKSUM_URL=${LSUP_PACKAGE_URL}.sha256
+    echoG "checksum URL is ${LSUP_CHECKSUM_URL}"
+    if ! $DLCMD ols.tgz.sha256 "${LSUP_CHECKSUM_URL}" ; then
+        echoR "Error, failed to download SHA-256 checksum."
+        rm -f ols.tgz ols.tgz.sha256
+        return 1
+    fi
+    if ! verify_package_sha256 ols.tgz ols.tgz.sha256 ; then
+        echoR "Error, SHA-256 verification failed for ${LSUP_PACKAGE_URL}."
+        rm -f ols.tgz ols.tgz.sha256
+        return 1
+    fi
+    echoG "SHA-256 verification passed."
+    return 0
+}
+
+
+cd "${UPDATE_DIR}" || exit 7
+#Clear anything left by an interrupted update.
+rm -rf "${UPDATE_DIR}/"*
 
 
 if [ "x${ISBETA}" = "xyes" ]; then
@@ -497,49 +548,42 @@ echoG "download URL is ${URL}"
 
 testsz=1000000  
 RET=1
-$DLCMD ols.tgz $URL
+download_package "$URL"
 RET=$?
-if [ $RET = 0 ] ; then
-    tz=$(stat -c%s ols.tgz)
-    if [ $tz -lt $testsz ] ; then
-        RET=1
-    fi
-fi
     
 if [ $RET != 0 ] ; then
     if [ "x${URLDIR}" = "xpreuse" ] ; then
-        echoR "Error, failed to download $URL, quit."
-        rm -rf ${LOCKFILE}
+        echoR "Error, failed to download or verify $URL, quit."
         exit 7
     else
-        echoR "Failed to download $URL, will try our under development version."
+        echoR "Failed to download or verify $URL, will try our under development version."
         URLDIR=preuse
         URL=https://openlitespeed.org/${URLDIR}/openlitespeed-${VERSION}-${ARCH}-linux.${URLMODE}tgz
         echoG "download URL is ${URL}"
         
         RET=1
-        $DLCMD ols.tgz $URL
+        download_package "$URL"
         RET=$?
-        if [ $RET = 0 ] ; then
-            tz=$(stat -c%s ols.tgz)
-            if [ $tz -lt $testsz ] ; then
-                RET=1
-            fi
-        fi
         
         if [ $RET != 0 ] ; then
-            echoR "Error, failed to download $URL, quit."
-            rm -rf ${LOCKFILE}
+            echoR "Error, failed to download or verify $URL, quit."
             exit 7
         fi
     fi
 fi
 
-tar xf ols.tgz
+if ! tar xf ols.tgz ; then
+    echoR "Error, failed to extract downloaded package."
+    exit 7
+fi
 if [ "x${ISLINUX}" = "xyes" ] ; then
-    SRCDIR=${TEMPPATH}/openlitespeed
+    SRCDIR=${UPDATE_DIR}/openlitespeed
 else
-    SRCDIR=${TEMPPATH}/openlitespeed-${VERSION}
+    SRCDIR=${UPDATE_DIR}/openlitespeed-${VERSION}
+fi
+if [ -L "${SRCDIR}" ] || [ ! -d "${SRCDIR}" ] ; then
+    echoR "Error, failed to find extracted package."
+    exit 7
 fi
 
 if [ -f ${LSWSHOME}/VERSION ] ; then 
@@ -571,7 +615,6 @@ if [ "x${ISLINUX}" = "xno" ] ; then
     else
         echoR "This version does not have ./build.sh, please run './configure; make; make install' to install it."
         echoG Usually ./configure need some parameters, this auto tool cannot continue. Exit. 
-        rm -rf ${LOCKFILE}
         exit 8
     fi
 fi
@@ -593,8 +636,8 @@ else
     cp modules/* ${LSWSHOME}/modules/
 fi
 
-rm -rf $SRCDIR
-rm -rf ${LSWSHOME}/autoupdate/*
+cd "${LSWSHOME}" || exit 9
+rm -rf "${UPDATE_DIR}/"*
 
 #Sign it and keep old sign
 if [ ! -e ${LSWSHOME}/PLAT ] ; then 
@@ -606,8 +649,6 @@ else
         echo "lsup-$ORGPLAT" > ${LSWSHOME}/PLAT
     fi
 fi
-
-rm -rf ${LOCKFILE}
 
 startService
 test_running
@@ -625,6 +666,3 @@ fi
 echoG "All ${PACKNAME} are updated and service is ${RUNSTATE}."
 echo 
 echo
-
-
-

@@ -256,6 +256,14 @@ def read_usersplans():
                 if pkg in plans:
                     try:
                         pwd_var = pwd.getpwnam(user)
+                    except KeyError:
+                        # The user named in /etc/userplans has no passwd entry
+                        # (account being torn down during removeacct, or a stale
+                        # userplans line). Skip it rather than aborting the whole
+                        # list/validate run -- mirrors read_pleskplans()'s
+                        # tolerance of a missing home directory.
+                        logging.debug("Skipping %s: no passwd entry for user %s" % (pkg, user))
+                        continue
                     except Exception as err:
                         common.fatal_error("passwd entry error: %s for user %s" % (err, user))
                     plans[pkg].append(pwd_var.pw_uid)

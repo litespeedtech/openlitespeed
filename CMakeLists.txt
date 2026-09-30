@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0...3.23)
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-Project(openlitespeed VERSION 1.9.2)
+Project(openlitespeed VERSION 1.9.3)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 INCLUDE(GNUInstallDirs)
 
@@ -203,7 +203,12 @@ add_definitions(-DUSE_UDNS)
 
 add_subdirectory(src)
 add_subdirectory(support)
-add_subdirectory(lshostexec)
+# lshostexec is the host side of the Linux namespace/bwrap sandbox: it is built
+# entirely on the sandbox_init_req_t/SANDBOX_DONE protocol from ns.h and
+# nsnosandbox.h, which exist only on Linux.
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_subdirectory(lshostexec)
+endif()
 
 if (BUILD_TEST)
 enable_testing()

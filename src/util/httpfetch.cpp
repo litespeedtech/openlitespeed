@@ -35,8 +35,11 @@
 #endif
 
 #include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <openssl/x509_vfy.h>
+#include <openssl/x509v3.h>
 
+#include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -86,13 +89,15 @@ HttpFetch::HttpFetch()
     , m_reqHeaderLen(0)
     , m_connTimeout(10)
     , m_iHostLen(0)
+    , m_iAuthorityLen(0)
     , m_pollEvents(0)
     , m_reqState(STATE_NOT_INUSE)
     , m_nonblocking(MODE_BLOCKING)
     , m_enableDriver(0)
     , m_iEnableDebug(0)
     , m_iSsl(0)
-    , m_iVerifyCert(0)
+    , m_iVerifyCert(1)
+    , m_iHostOffset(0)
     , m_family(PF_INET)
     , m_pReqBody(NULL)
     , m_reqBodyLen(0)
@@ -210,6 +215,8 @@ void HttpFetch::reset()
     m_reqSent       = 0;
     m_reqHeaderLen  = 0;
     m_iHostLen      = 0;
+    m_iAuthorityLen = 0;
+    m_iHostOffset   = 0;
     m_reqBodyLen    = 0;
     m_iReqInited    = 0;
     m_tmStart.tv_sec = 0;
@@ -359,9 +366,19 @@ int HttpFetch::startDnsLookup(const char *addrServer)
 }
 
 
-static SSL *getSslContext()
+enum fetch_ca_status
+{
+    FETCH_CA_UNINITIALIZED,
+    FETCH_CA_READY,
+    FETCH_CA_NOT_FOUND,
+    FETCH_CA_LOAD_FAILED,
+};
+
+
+static SSL *getSslContext(int *pCaStatus)
 {
     static SslContext *s_pFetchCtx = NULL;
+    static int s_iCaStatus = FETCH_CA_UNINITIALIZED;
     if (!s_pFetchCtx)
     {
         s_pFetchCtx = new SslContext();
@@ -372,10 +389,24 @@ static SSL *getSslContext()
             //NOTE: Turn off TLSv13 for now, need to figure out 0-RTT
             s_pFetchCtx->setProtocol(14);
             //s_pFetchCtx->setCipherList();
+
+            const char *pCAFile = SslUtil::getVerifyCAFile();
+            const char *pCAPath = SslUtil::getVerifyCAPath();
+            if (!pCAFile && !pCAPath)
+                s_iCaStatus = FETCH_CA_NOT_FOUND;
+            else if (SSL_CTX_load_verify_locations(s_pFetchCtx->get(),
+                                                   pCAFile, pCAPath) == 1)
+                s_iCaStatus = FETCH_CA_READY;
+            else
+            {
+                s_iCaStatus = FETCH_CA_LOAD_FAILED;
+                ERR_clear_error();
+            }
         }
         else
             return NULL;
     }
+    *pCaStatus = s_iCaStatus;
     return s_pFetchCtx->newSSL();
 }
 
@@ -407,21 +438,26 @@ X509 *HttpFetch::getSslCert() const
 
 int HttpFetch::verifyDomain()
 {
-    X509 *pCert;
-    X509_NAME *pName;
-    BIO *pBio;
-    char out[512];
-    int len;
-    pCert = SSL_get_peer_certificate(m_ssl.getSSL());
-    pName = X509_get_subject_name(pCert);
-    pBio = BIO_new(BIO_s_mem());
-    if ((len = X509_NAME_print_ex(pBio, pName, 0, 0)) != 1)
+    X509 *pCert = SSL_get_peer_certificate(m_ssl.getSSL());
+    if (!pCert)
         return -1;
-    len = BIO_read(pBio, out, 511);
-    BIO_free(pBio);
-    if ((len - 3 < m_iHostLen) || (memcmp(out + 3, m_achHost, m_iHostLen)))
-        return -1;
-    return 0;
+
+    char *pHost = m_achHost + m_iHostOffset;
+    char ch = pHost[m_iHostLen];
+    unsigned char ip[sizeof(struct in6_addr)];
+    int ret;
+
+    pHost[m_iHostLen] = 0;
+    if (inet_pton(AF_INET, pHost, ip) == 1)
+        ret = X509_check_ip(pCert, ip, sizeof(struct in_addr), 0);
+    else if (inet_pton(AF_INET6, pHost, ip) == 1)
+        ret = X509_check_ip(pCert, ip, sizeof(struct in6_addr), 0);
+    else
+        ret = X509_check_host(pCert, pHost, m_iHostLen,
+                              X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS, NULL);
+    pHost[m_iHostLen] = ch;
+    X509_free(pCert);
+    return ret == 1 ? 0 : -1;
 }
 
 
@@ -430,31 +466,45 @@ int HttpFetch::connectSSL()
     int ret;
     if (!m_ssl.getSSL())
     {
-        m_ssl.setSSL(getSslContext());
+        int caStatus;
+        m_ssl.setSSL(getSslContext(&caStatus));
         if (!m_ssl.getSSL())
             return LS_FAIL;
         m_ssl.setfd(m_fdHttp);
         if (m_iVerifyCert)
         {
-            // verify
-            const char *pCAFile = SslUtil::getVerifyCAFile();
-            const char *pCAPath = SslUtil::getVerifyCAPath();
+            if (caStatus != FETCH_CA_READY)
+            {
+                if (caStatus == FETCH_CA_NOT_FOUND)
+                    LS_ERROR(m_pLogger, "HttpFetch[%d]:: [SSL] No supported "
+                             "system CA store was found.", getLoggerId());
+                else
+                    LS_ERROR(m_pLogger, "HttpFetch[%d]:: [SSL] Failed to "
+                             "load system CA file '%s' and path '%s'.",
+                             getLoggerId(),
+                             SslUtil::getVerifyCAFile()
+                                 ? SslUtil::getVerifyCAFile() : "(none)",
+                             SslUtil::getVerifyCAPath()
+                                 ? SslUtil::getVerifyCAPath() : "(none)");
+                endReq(ERROR_SSL_CERT_VERIFY);
+                return ERROR_SSL_CERT_VERIFY;
+            }
             SSL_set_verify(m_ssl.getSSL(),
                            SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
-            SSL_CTX *pCtx = SSL_get_SSL_CTX(m_ssl.getSSL());
-            SSL_CTX_load_verify_locations(pCtx, pCAFile, pCAPath);
         }
-        char ch = m_achHost[m_iHostLen];
-        m_achHost[m_iHostLen] = 0;
-        m_ssl.setTlsExtHostName(m_achHost);
-        m_achHost[m_iHostLen] = ch;
-        m_ssl.tryReuseCachedSession(m_achHost, m_iHostLen);
+        char *pHost = m_achHost + m_iHostOffset;
+        char ch = pHost[m_iHostLen];
+        pHost[m_iHostLen] = 0;
+        m_ssl.setTlsExtHostName(pHost);
+        pHost[m_iHostLen] = ch;
+        m_ssl.tryReuseCachedSession(m_achHost, m_iAuthorityLen);
     }
     if ((ret = pollEvent(m_pollEvents, m_connTimeout)) != 1)
     {
         closeConnection();
         m_reqState = STATE_ERROR;
         m_statusCode = ERROR_CONN_TIMEOUT;
+        endReq(ERROR_CONN_TIMEOUT);
         return ERROR_CONN_TIMEOUT;
     }
     ret = m_ssl.connect();
@@ -474,7 +524,7 @@ int HttpFetch::connectSSL()
                 ret = ERROR_SSL_UNMATCH_DOMAIN;
             LS_ERROR(m_pLogger, "HttpFetch[%d]:: [SSL] Verify failed.",
                 getLoggerId());
-            cancel();
+            endReq(ret);
             break;
         }
         LS_DBG_M(m_pLogger, "HttpFetch[%d]:: [SSL] connected, session reuse: %d",
@@ -482,11 +532,12 @@ int HttpFetch::connectSSL()
         m_pollEvents = POLLOUT;
         break;
     default:
-        if (!m_ssl.isVerifyOk())
+        if (m_iVerifyCert && !m_ssl.isVerifyOk())
         {
-            LS_DBG_L(m_pLogger, "HttpFetch[%d]:: SSL Verify failed.",
-                    getLoggerId());
-            cancel();
+            ret = ERROR_SSL_CERT_VERIFY;
+            LS_ERROR(m_pLogger, "HttpFetch[%d]:: SSL Verify failed.",
+                     getLoggerId());
+            endReq(ret);
         }
         else if (errno == EIO)
             LS_DBG_M(m_pLogger, "HttpFetch[%d]:: SSL_connect() failed!: %s",
@@ -577,9 +628,9 @@ int HttpFetch::buildReq(const char *pMethod, const char *pURL,
     if (pContentType == NULL)
         pContentType = "application/x-www-form-urlencoded";
     const char *p = pURL + 7;
-    if (*(pURL + 4) != ':')
+    m_iSsl = (*(pURL + 4) != ':');
+    if (m_iSsl)
     {
-        m_iSsl = 1;
         ++p;
     }
     pURI = strchr(p, '/');
@@ -587,9 +638,38 @@ int HttpFetch::buildReq(const char *pMethod, const char *pURL,
         return -1;
     if (pURI - p > 250)
         return -1;
-    m_iHostLen = pURI - p;
-    memcpy(m_achHost, p, m_iHostLen);
-    m_achHost[ m_iHostLen ] = 0;
+    int authorityLen = pURI - p;
+    m_iAuthorityLen = authorityLen;
+    memcpy(m_achHost, p, authorityLen);
+    m_achHost[authorityLen] = 0;
+    if (authorityLen == 0)
+        return -1;
+
+    const char *pPort = NULL;
+    m_iHostOffset = 0;
+    m_iHostLen = authorityLen;
+    if (m_achHost[0] == '[')
+    {
+        const char *pClose = (const char *)memchr(m_achHost, ']', authorityLen);
+        if (!pClose || pClose == m_achHost + 1
+            || (pClose[1] && pClose[1] != ':'))
+            return -1;
+        m_iHostOffset = 1;
+        m_iHostLen = pClose - m_achHost - 1;
+        if (pClose[1] == ':')
+            pPort = pClose + 1;
+    }
+    else
+    {
+        pPort = (const char *)memchr(m_achHost, ':', authorityLen);
+        if (pPort)
+        {
+            if (memchr(pPort + 1, ':',
+                       authorityLen - (pPort - m_achHost) - 1))
+                return -1;
+            m_iHostLen = pPort - m_achHost;
+        }
+    }
     if (m_iHostLen == 0)
         return -1;
     if (m_reqBufLen < len)
@@ -635,7 +715,7 @@ int HttpFetch::buildReq(const char *pMethod, const char *pURL,
                                         (long long)m_reqBodyLen);
     }
     strcpy(m_pReqBuf + m_reqHeaderLen, "\r\n");
-    if (strchr(m_achHost, ':') == NULL)
+    if (!pPort)
         lstrncat(m_achHost, (m_iSsl ? ":443" : ":80"), sizeof(m_achHost));
     m_reqHeaderLen += 2;
     m_reqSent = 0;
@@ -1185,10 +1265,10 @@ int HttpFetch::cancel()
 int HttpFetch::processEvents(short revent)
 {
     if (revent & POLLOUT)
-        if (sendReq() == -1)
+        if (sendReq() < 0)
             return -1;
     if ((m_fdHttp != -1) && (revent & POLLIN))
-        if (recvResp() == -1)
+        if (recvResp() < 0)
             return -1;
     if (revent & POLLERR)
         endReq(ERROR_SOCKET_ERROR);

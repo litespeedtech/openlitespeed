@@ -156,8 +156,66 @@ public:
 class AutoBuf;
 class LsShmTidMgr;
 struct LsShmTidTblBlk;
+//
+// Holds the hash lock for the enclosing scope; see LsShmPoolLock, which this
+// mirrors.  Whether the lock was taken is kept here, on the stack, so the
+// release cannot disagree with the acquire, and a scope that finds the lock
+// already held by this thread leaves it to the scope that took it.
+//
+class LsShmHashLock
+{
+public:
+    explicit LsShmHashLock(LsShmHash *pHash, bool force = false);
+    ~LsShmHashLock();
+
+    // Rehash if another process grew the table.  Skipped when the lock was
+    // recovered from a task that died holding it, the table is not trusted.
+    void chkRehash();
+
+    // 0 when the lock is ours, negative when it was taken over from a task
+    // that died holding it.
+    int status() const
+    {   return m_iRet;      }
+
+private:
+    LsShmHash  *m_pHash;
+    bool        m_owned;    // false when this scope does not hold the lock
+    int         m_iRet;
+
+    LS_NO_COPY_ASSIGN(LsShmHashLock);
+};
+
+
+//
+// Takes the hash lock for the scope and rehashes if another process grew the
+// table: the guard form of the old autoLockChkRehash()/autoUnlock() pair.
+//
+class LsShmHashAutoLock : public LsShmHashLock
+{
+public:
+    explicit LsShmHashAutoLock(LsShmHash *pHash);
+};
+
+
+//
+// The hash methods called while this is alive take the same lock again and
+// nest into it.  This used to turn auto locking off for the duration
+// instead, which every other thread sharing the hash saw as well.
+//
+class LsShmHashLocker
+{
+public:
+    explicit LsShmHashLocker(LsShmHash *pHash);
+private:
+    LsShmHashLock   m_lock;
+
+    LS_NO_COPY_ASSIGN(LsShmHashLocker);
+};
+
+
 class LsShmHash : public ls_shmhash_s
 {
+    friend class LsShmHashLock;
     friend class LsShmPool;
 public:
     typedef LsShmHElem *iterator;
@@ -304,13 +362,12 @@ public:
         ls_strpair_t parms;
         ls_str_set(&parms.key, (char *)pKey, keyLen);
         
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iterOff = (*m_find)(this, &parms);
         if (iterOff.m_iOffset != 0)
         {
             eraseIteratorHelper(iterOff);
         }
-        autoUnlock();
         return iterOff.m_iOffset != 0;
     }
 
@@ -384,13 +441,12 @@ public:
         uint64_t tid = 0;
         ls_str_set(&parms.key, (char *)pKey, keyLen);
 
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iterOff = (*m_find)(this, &parms);
         if (iterOff.m_iOffset != 0)
         {
             tid = doGetTid(iterOff);
         }
-        autoUnlock();
         return tid;
     }
 
@@ -408,9 +464,8 @@ public:
     iteroffset  insertCopy(LsShmHKey key, ls_strpair_t *pParms)
     {
         iteroffset off;
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         off = insertCopy2(key, pParms);
-        autoUnlock();
         return off;
     }
 
@@ -420,86 +475,76 @@ public:
     //
     iteroffset findIterator(ls_strpair_t *pParms)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = (*m_find)(this, pParms);
-        autoUnlock();
         return iterOff;
     }
 
     iteroffset getIterator(ls_strpair_t *pParms, int *pFlag)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = (*m_get)(this, pParms, pFlag);
-        autoUnlock();
         return iterOff;
     }
 
     iteroffset insertIterator(ls_strpair_t *pParms)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = (*m_insert)(this, pParms);
-        autoUnlock();
         return iterOff;
     }
 
     iteroffset setIterator(ls_strpair_t *pParms)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = (*m_set)(this, pParms);
-        autoUnlock();
         return iterOff;
     }
 
     iteroffset updateIterator(ls_strpair_t *pParms)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = (*m_update)(this, pParms);
-        autoUnlock();
         return iterOff;
     }
 
     iteroffset findIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = find2(key, pParms);
-        autoUnlock();
         return iterOff;
     }
 
     iteroffset getIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms,
                                   int *pFlag)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = find2(key, pParms);
         iterOff = doGet(iterOff, key, pParms, pFlag);
-        autoUnlock();
         return iterOff;
     }
 
     iteroffset insertIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = find2(key, pParms);
         iterOff = doInsert(iterOff, key, pParms);
-        autoUnlock();
         return iterOff;
     }
 
     iteroffset setIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = find2(key, pParms);
         iterOff = doSet(iterOff, key, pParms);
-        autoUnlock();
         return iterOff;
     }
 
     iteroffset updateIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms)
     {
-        autoLockChkRehash();
+        LsShmHashAutoLock lock(this);
         iteroffset iterOff = find2(key, pParms);
         iterOff = doUpdate(iterOff, key, pParms);
-        autoUnlock();
         return iterOff;
     }
 
@@ -639,6 +684,10 @@ public:
     int isAutoLock() const
     {   return m_iAutoLock;   }
 
+    // the hash lock, for diagnostics and tests
+    ls_shmlock_t *getLock() const
+    {   return m_pShmLock;    }
+
     int lock()
     {
         if (m_iAutoLock != 0)
@@ -746,21 +795,29 @@ protected:
 
     static int release_hash_elem(iteroffset iterOff, void *pUData);
 
-    int autoLock()
+    // Whether the enclosing LsShmHashLock has to take the lock itself.
+    // False when auto locking is off, so the caller holds it, and false when
+    // this thread already holds it, in which case the outer scope owns it.
+    // force: take it whatever mode the hash is in (lockEx()).
+    bool needLock(bool force = false) const
     {
-        if (m_iAutoLock == 0)
+        if (!force && m_iAutoLock == 0)
         {
             assert(m_pPool->getShm()->isLocked(m_pShmLock));
-            return 0;
+            return false;
         }
-        return getPool()->getShm()->lockRemap(m_pShmLock);
+        return !getPool()->getShm()->isLocked(m_pShmLock);
     }
 
-    int autoUnlock()
-    {   assert(m_pPool->getShm()->isLocked(m_pShmLock));
-        return m_iAutoLock && ls_shmlock_unlock(m_pShmLock); }
+    int lockNow()
+    {   return getPool()->getShm()->lockRemap(m_pShmLock);   }
 
-    void autoLockChkRehash();
+    int unlockNow()
+    {   assert(m_pPool->getShm()->isLocked(m_pShmLock));
+        return ls_shmlock_unlock(m_pShmLock);   }
+
+    // rehash if another process grew the table; must hold the lock
+    void chkRehashLocked();
 
     // stat helper
     int statIdx(iteroffset iterOff, for_each_fn2 fun, void *pUData);
@@ -892,28 +949,45 @@ public:
 };
 
 
-class LsShmHashLocker
-{
-public:
-    explicit LsShmHashLocker(LsShmHash *pHash)
-        : m_pHash(pHash)
-    {
-        ;
-        if ((m_isAutoLock = m_pHash->isAutoLock()) != false)
-            m_pHash->disableAutoLock();
-        m_pHash->lockEx();
-    }
-    ~LsShmHashLocker()
-    {
-        m_pHash->unlockEx();
-        if (m_isAutoLock)
-            m_pHash->enableAutoLock();
-    }
-private:
-    LsShmHash  *m_pHash;
-    bool        m_isAutoLock;
 
-    LS_NO_COPY_ASSIGN(LsShmHashLocker);
-};
+inline LsShmHashLock::LsShmHashLock(LsShmHash *pHash, bool force)
+    : m_pHash(pHash)
+    , m_owned(false)
+    , m_iRet(0)
+{
+    if (pHash->needLock(force))
+    {
+        m_owned = true;
+        m_iRet = pHash->lockNow();
+    }
+}
+
+
+inline LsShmHashLock::~LsShmHashLock()
+{
+    if (m_owned)
+    {
+        m_owned = false;
+        m_pHash->unlockNow();
+    }
+}
+
+
+inline void LsShmHashLock::chkRehash()
+{
+    if (m_iRet == 0)
+        m_pHash->chkRehashLocked();
+}
+
+
+inline LsShmHashAutoLock::LsShmHashAutoLock(LsShmHash *pHash)
+    : LsShmHashLock(pHash)
+{   chkRehash();    }
+
+
+inline LsShmHashLocker::LsShmHashLocker(LsShmHash *pHash)
+    : m_lock(pHash, true)
+{}
+
 
 #endif // LSSHMHASH_H

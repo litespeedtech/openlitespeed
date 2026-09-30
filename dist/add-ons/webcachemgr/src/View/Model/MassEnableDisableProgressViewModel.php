@@ -13,6 +13,7 @@ use Lsc\Wp\Context\Context;
 use Lsc\Wp\PluginVersion;
 use Lsc\Wp\LSCMException;
 use Lsc\Wp\Logger;
+use Lsc\Wp\Util;
 
 class MassEnableDisableProgressViewModel
 {
@@ -28,6 +29,9 @@ class MassEnableDisableProgressViewModel
     protected $action;
 
     /**
+     * Un-prefixed session key name. Pass it through Util::sessionKey() to get
+     * the actual $_SESSION key.
+     *
      * @var string
      */
     protected $sessionKey;
@@ -108,7 +112,7 @@ class MassEnableDisableProgressViewModel
 
     protected function grabSessionData()
     {
-        $info = $_SESSION[$this->sessionKey];
+        $info = $_SESSION[Util::sessionKey($this->sessionKey)];
 
         $this->tplData[self::FLD_INSTALLS_COUNT] = count($info['installs']);
     }
@@ -133,7 +137,7 @@ class MassEnableDisableProgressViewModel
              * Unset session data early.
              */
             if ( $this->tplData[self::FLD_ACTION] == 'enable' ) {
-                unset($_SESSION[$this->sessionKey]);
+                Util::unsetSessionKey($this->sessionKey);
             }
         }
 

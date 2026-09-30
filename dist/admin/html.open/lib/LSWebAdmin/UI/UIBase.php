@@ -335,7 +335,7 @@ class UIBase
                     $key = $value;
                 }
                 if ($key === 'forcesel') {
-                    $o .= '<option disabled ';
+                    $o .= '<option value="" disabled ';
                     if ($selValue === null || $selValue === '') {
                         $o .= 'selected';
                     }

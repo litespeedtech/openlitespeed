@@ -14,6 +14,7 @@ class ConfigXmlMigrator
 {
     public static function convertXmlRootToConfRoot($xmlroot, $filemap)
     {
+        ConfigXmlBotWhiteListAdapter::normalizeForConfigMap($xmlroot);
         $root = $xmlroot->DupHolder();
         $filemap->Convert(0, $xmlroot, 1, $root);
         return $root;

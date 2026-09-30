@@ -65,6 +65,7 @@ extern char       *s_nosandbox_name;
 extern int         s_nosandbox_added;
 
 int nsnosandbox_init();
+int nsnosandbox_validate_directory();
 int nsnosandbox_socket_file_name(char *file_name, int max);
 void nsnosandbox_done();
 int nsnosandbox_symlink();

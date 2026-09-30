@@ -205,13 +205,15 @@ class ConfRouteState
         $tbl = call_user_func([$tableDefClass, 'GetInstance'])->GetTblDef($tid);
         $subtbls = $tbl->Get(DTbl::FLD_SUBTBLS);
         $newkey = $extracted->GetChildVal($subtbls[0]);
+        if ($newkey === null || $newkey === '') {
+            return;
+        }
+
         $subtid = '';
-        if ($newkey != null) {
-            if ($newkey == '0' || !isset($subtbls[$newkey])) {
-                $subtid = $subtbls[1];
-            } else {
-                $subtid = $subtbls[$newkey];
-            }
+        if ($newkey == '0' || !isset($subtbls[$newkey])) {
+            $subtid = $subtbls[1];
+        } else {
+            $subtid = $subtbls[$newkey];
         }
 
         $this->_tid = $tid0 . $subtid;

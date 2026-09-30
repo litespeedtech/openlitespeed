@@ -210,8 +210,7 @@ lsquic_conn_ctx_t *QuicEngine::onNewConn(void *stream_if_ctx,
     else
         pClientInfo = ClientCache::getInstance().getClientInfo((sockaddr *)pPeer);
 
-    if (!pClientInfo ||
-        (int)pClientInfo->getConns() >= pClientInfo->getPerClientHardLimit())
+    if (!pClientInfo || pClientInfo->checkAccess())
     {
         lsquic_conn_abort(c);
         return NULL;
@@ -296,8 +295,11 @@ void QuicEngine::onConnClosed(lsquic_conn_t *c)
     {
         pClientInfo->decConn();
         lsquic_conn_set_ctx(c, NULL);
+        if (s_active_conns > 0)
+            --s_active_conns;
+        else
+            LS_WARN("QUIC active connection count is already zero");
     }
-    s_active_conns--;
     LS_DBG_H("[%s] [CLC] QUIC engine decrease connection count 1, current: %u.",
              pClientInfo ? pClientInfo->getAddrString() : "N/A", s_active_conns);
     //     HttpGlobals::decCurConns();

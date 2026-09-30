@@ -26,6 +26,7 @@
 #define INVALID_CHUNK   -3
 #define CHUNK_EOF       -4
 #define MAX_CHUNK_LEN_BUF_SIZE 80
+#define MAX_CHUNK_TRAILER_SIZE (64 * 1024)
 class ChunkInputStream : public InputStream
 {
     InputStream *m_pIS;
@@ -33,6 +34,7 @@ class ChunkInputStream : public InputStream
     int     m_iRemain;
     int     m_iBufLen;
     int     m_iBufUsed;
+    int     m_iTrailerLen;
     char    m_achChunkLenBuf[MAX_CHUNK_LEN_BUF_SIZE];
     //char    m_achLastBytes[8];
 

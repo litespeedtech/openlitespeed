@@ -40,6 +40,7 @@
 #include "nsipc.h"
 #include "nsutils.h"
 #include "lscgid.h"
+#include "rootcheck.h"
 #include "use_bwrap.h"
 
 #define CAP_TO_MASK_0(x) (1L << ((x) & 31))
@@ -337,6 +338,11 @@ int ns_init_engine(const char *ns_conf, int nolisten)
         ls_stderr("Namespace specified but not supported - disabled\n");
         return 0;
     }
+    /* The disabled-UID list, hostexec allowlist, and hostexec socket metadata
+     * all live here and may be accessed while still root.  Validate once
+     * before any of those reads, writes, unlinks, or binds. */
+    if (nsnosandbox_validate_directory())
+        return 0;
     if (ns_conf)
     {
         if (s_ns_conf)
@@ -1251,13 +1257,28 @@ static int setup_bind_tmp(lscgid_t *pCGI, SetupOp *op)
 static int setup_copy(lscgid_t *pCGI, SetupOp *op, int index)
 {
     int fds[2];
+    int rc;
     DEBUG_MESSAGE("setup_copy\n");
     if (!op->source || !op->dest)
     {
         ls_stderr("Namespace missing source or dest to copy\n");
         return DEFAULT_ERR_RC;
     }
-    int fd = open(op->source, O_RDONLY);
+    if (geteuid() == 0 && (rc = check_root_protected_file(op->source)))
+    {
+        if (rc == 404 && (op->flags & (OP_FLAG_ALLOW_NOTEXIST |
+                                      OP_FLAG_SOURCE_CREATE)))
+        {
+            DEBUG_MESSAGE("Protected copy source does not exist, set op to "
+                          "NOOP: %s\n", op->source);
+            op->type = SETUP_NOOP;
+            return 0;
+        }
+        ls_stderr("Namespace refusing unprotected root copy source: %s\n",
+                  op->source);
+        return rc;
+    }
+    int fd = open(op->source, O_RDONLY | O_CLOEXEC);
     if (fd == -1)
     {
         int err = errno;
@@ -1738,7 +1759,7 @@ static int do_copy(uint32_t flags, const char *source, const char *dest, int *fd
             return DEFAULT_ERR_RC;
         }
     }
-    char *last_slash = strrchr(dest, '/');
+    const char *last_slash = strrchr(dest, '/');
     if (!last_slash)
     {
         ls_stderr("Namespace copy of unqualified target %s\n", dest);
@@ -1957,7 +1978,7 @@ static int privileged_op(int privileged_op_socket, uint32_t op,
                something manages to send hacked priv-sep operation requests. */
             {
                 char name[256];
-                char *slash = strrchr(arg1, '/');
+                const char *slash = strrchr(arg1, '/');
                 const char *hostname = slash ? slash + 1 : arg1;
                 if (memccpy(name, hostname, '\0', sizeof(name)) == NULL)
                 {
@@ -3054,6 +3075,11 @@ static int do_ns(lscgid_t *pCGI, SetupOp *setupOp, int persisted)
         rc = nsopts_rc_from_errno(errno);
     }
     
+    /* Validate in the completed mount namespace before persist_ns_done()
+     * reports success to the parent. */
+    if (!rc && !persisted)
+        rc = check_root_exec_path(pCGI);
+
     rc = persist_ns_done(pCGI, persisted, rc, parent_pid, 
                          persist_sibling_child, persist_sibling_rc);
 
@@ -3275,7 +3301,7 @@ void ns_setverbose_callback(verbose_callback_t callback)
 }
 
 
-void ns_done()
+void ns_done(void)
 {
     DEBUG_MESSAGE("ns_done\n");
     if (s_ns_watcher_pid > 0)
