@@ -121,6 +121,8 @@ SET(unittest_STAT_SRCS
 add_executable(openlitespeed ${openlitespeed_SRCS}
     ${unittest_STAT_SRCS}
 )
+# Dynamic modules resolve g_api and other API symbols from the server.
+set_target_properties(openlitespeed PROPERTIES ENABLE_EXPORTS ON)
 
 add_executable(ls_shmstat
     shm/ls_shmstat.cpp

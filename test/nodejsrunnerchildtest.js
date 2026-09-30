@@ -226,7 +226,7 @@ async function runExecPathScenario(runnerPath) {
     fs.writeFileSync(otherRuntime, [
         '#!/bin/sh',
         'echo "$$ $@" > "$TEST_REPORT_FILE"',
-        'sleep 30',
+        'exec sleep 30',
         ''
     ].join('\n'), { mode: 0o755 });
 
