@@ -77,20 +77,6 @@ int ls_expandfile(int fd, LsShmOffset_t fromsize, LsShmXSize_t incrsize)
     return 0;
 }
 
-
-LsShmSize_t ls_shm_pagesize(void)
-{
-    static LsShmSize_t s_iSysPageSize = 0;
-    if (s_iSysPageSize == 0)
-    {
-        long size = sysconf(_SC_PAGESIZE);
-        if (size < LSSHM_PAGESIZE)
-            size = LSSHM_PAGESIZE;
-        s_iSysPageSize = (LsShmSize_t)size;
-    }
-    return s_iSysPageSize;
-}
-
 };
 
 
@@ -575,8 +561,8 @@ LsShmStatus_t LsShm::openLockShmFile(int mode)
 
 LsShmStatus_t LsShm::newShmMap(LsShmSize_t size, uint64_t id)
 {
-    if (size < ls_shm_pagesize())
-        size = ls_shm_pagesize();
+    if (size < s_iPageSize)
+        size = s_iPageSize;
     if ((expandFile(0, roundToPageSize(size)) != LSSHM_OK)
         || (mapAddrMap(size) != LSSHM_OK))
         return LSSHM_ERROR;
@@ -650,7 +636,7 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         return m_status;
     }
 
-    size = roundToPageSize(size);
+    size = ((size + s_iPageSize - 1) / s_iPageSize) * s_iPageSize;
 
     if (fstat(m_iFd, &mystat) < 0)
     {

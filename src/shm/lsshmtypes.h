@@ -111,14 +111,6 @@ typedef v2_comp                 LsShmValComp_fn;
 #define LSSHM_PAGESIZE          0x4000  // lower bound for SHM page size
 #define LSSHM_MAXNAMELEN        12      // only 11 characters.
 
-/* SHM file offsets end up as the mmap() offset argument, which the kernel
- * requires to be a multiple of the running system's page size (16K on Apple
- * Silicon and 16K-page ARM64 kernels, possibly larger on others).  Returns
- * the larger of sysconf(_SC_PAGESIZE) and LSSHM_PAGESIZE, so the growth
- * granularity never drops below the historical value either.
- */
-LsShmSize_t ls_shm_pagesize(void);
-
 #define LSSHM_SYSSHM            "LsShm"     // default SHM name
 #define LSSHM_SYSPOOL           "LsPool"    // default SHM POOL name
 #define LSSHM_SYSHASH           "LsHash"    // default SHM HASH name
