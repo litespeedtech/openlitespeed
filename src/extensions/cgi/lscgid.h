@@ -26,7 +26,8 @@ extern "C"
 #endif
 
 extern int lscgid_main(int fd, char *argv0, const char *secret,
-                       char *pServerSock);
+                       char *pServerSock, const char *stderrLogPath,
+                       int stderrLogFd);
 
 typedef struct
 {
@@ -53,4 +54,3 @@ extern int apply_rlimits_uid_chroot_stderr(lscgid_t *pCGI);
 #endif
 
 #endif
-
