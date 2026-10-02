@@ -130,7 +130,7 @@ public:
     }
     
     int mapAddrSpace(size_t total);
-    int remap(int fd, size_t start_offset, size_t new_size);
+    int remap(int fd, size_t start_offset, size_t new_size, size_t page_size);
     void unmap();
     
     size_t getAvailAddrSpace( size_t offset, size_t required_size);

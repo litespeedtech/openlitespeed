@@ -305,6 +305,7 @@ private:
     AutoStr2            m_headerLeftOver;
 
     static_file_data_t *m_pUrlStaticFileData;
+    const char         *m_pEncodedURI;
 
 
 
@@ -313,6 +314,7 @@ private:
 
     int setQS(const char *qs, int qsLen);
     void uSetURI(char *pURI, int uriLen);
+    void setNormalizedURI(char *pURI, int uriLen, int encoded);
 
     int redirectDir(const char *pURI);
     int processPath(const char *pURI, int uriLen, char *pBuf,
@@ -441,6 +443,12 @@ public:
     {   return ls_str_cstr(&m_curUrl.key);  }
     int   getURILen()
     {   return ls_str_len(&m_curUrl.key);   }
+    bool isOptionsAsterisk() const
+    {
+        return m_method == HttpMethod::HTTP_OPTIONS
+               && ls_str_len(&m_curUrl.key) == 1
+               && *ls_str_cstr(&m_curUrl.key) == '*';
+    }
 
     void setNewHost(const char *pInfo, int len)
     {   ls_str_xsetstr(&m_newHost, pInfo, len, m_pPool);   }
@@ -448,6 +456,8 @@ public:
     {   return ls_str_len(&m_newHost);  }
     const char *getNewHost()
     {   return ls_str_cstr(&m_newHost); }
+    bool isNewHostValid() const;
+    int getNewHostNameLen() const;
 
     const char *getPathInfo()
     {   return ls_str_cstr(&m_pathInfo);    }
@@ -514,6 +524,7 @@ public:
     int getOrgReqURLLen() const             {   return m_reqURLLen;         }
 
     const char *encodeReqLine(int &len);
+    const char *encodeProxyReqLine(int &len);
 
     const char *getAuthUser() const         {   return m_pAuthUser;         }
 
@@ -680,7 +691,7 @@ public:
     void  setMimeType(const MimeSetting *mime) {   m_pMimeType = mime;         }
 
     //int setRewriteURI( const char * pURL, int len );
-    int setRewriteURI(const char *pURL, int len, int no_escape = 1);
+    int setRewriteURI(const char *pURL, int len, int encoded = 0);
     int setRewriteQueryString(const char *pQS, int len);
     int setRewriteLocation(char *pURI, int uriLen,
                            const char *pQS, int qsLen, int escape);
@@ -744,6 +755,7 @@ public:
     void orContextState(int s)            {   m_iContextState |= s;       }
     void clearContextState(int s)         {   m_iContextState &= ~s;      }
     int getContextState(int s) const    {   return m_iContextState & s; }
+    void processCacheFrontendHeader(bool trusted);
 
     const char *getUserAgent() const
     {   return getHeader(HttpHeader::H_USERAGENT);      }
@@ -873,7 +885,7 @@ public:
     int fileStat(const char *pPath, struct stat *st);
 
     int internalRedirectURI(const char *pURI, int len, int resetPathInfo = 1,
-                            int no_escape = 1);
+                            int encoded = 0);
 //     void setErrorPage( )
 //     {   m_iContextState |= IS_ERROR_PAGE;       }
 //     int  redirect( const char * pURL, int len, int alloc = 0 );
@@ -921,6 +933,7 @@ public:
     int createHeaderValue(HttpSession *pSession, const char *pFmt, int len,
                           char *pBuf, int maxLen);
     void eraseHeader(key_value_pair * pHeader);
+    void dropUnknownReqHeader(const char *pName, int nameLen);
 
     void appendReqHeader( const char *pName, int iNameLen,
                           const char *pValue, int iValLen);

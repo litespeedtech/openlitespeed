@@ -228,6 +228,7 @@ class HttpSession
     ClientInfo           *m_pClientInfo;
 
     const AccessControl * m_pVHostAcl;
+    const HttpContext    *m_pWebSocketBackend;
     int                   m_iVHostAccess;
 
     uint16_t              m_iRemotePort;
@@ -255,6 +256,7 @@ class HttpSession
     ReqParser            *m_pReqParser;
 
     AutoBuf               m_sExtCmdResBuf;
+    AutoStr2              m_sWebSocketUrl;
     evtcb_pf              m_cbExtCmd;
     long                  m_lExtCmdParam;
     void                 *m_pExtCmdParam;
@@ -470,7 +472,14 @@ private:
     int writeRespBodyBlockFilterInternal(SendFileInfo *pData, const char *pBuf,
                                          int written, lsi_param_t *param = NULL);
     int chunkSendfile(int fdSrc, off_t off, size_t size);
-    int processWebSocketUpgrade(HttpVHost *pVHost);
+    int processWebSocketUpgrade(HttpVHost *pVHost,
+                                const HttpContext *pContext);
+    int deferWebSocketUpgrade(const char *pUrl, int len);
+    int mapAndAuthWebSocketUpgrade(const HttpContext *pBackendContext);
+    int authWebSocketUpgrade(const HttpContext *pContext);
+    bool shouldUpgradeWebSocket(const HttpContext *pContext) const;
+    void clearDeferredWebSocket();
+    int sendOptionsAsteriskResp();
     int switchToWebSocket(const GSockAddr *pAddr, bool ssl,
                           const char *url, int url_len);
     int switchToWebSocket(const char *pAddr, bool ssl,
@@ -581,6 +590,24 @@ public:
 
     HttpReq *getReq()               {   return &m_request;  }
     const HttpReq *getReq() const   {   return &m_request;  }
+#ifdef RUN_TEST
+    int testProcessContextMap()     {   return processContextMap();  }
+    HSPState testGetProcessState() const {   return m_processState;  }
+    int testDeferWebSocketUpgrade(const char *pUrl, int len)
+    {   return deferWebSocketUpgrade(pUrl, len);  }
+    int testAuthWebSocketUpgrade(const HttpContext *pContext)
+    {   return authWebSocketUpgrade(pContext);  }
+    int testMapAndAuthWebSocketUpgrade(const HttpContext *pContext)
+    {   return mapAndAuthWebSocketUpgrade(pContext);  }
+    int testProcessContextAuth() {   return processContextAuth();  }
+    bool testShouldUpgradeWebSocket(const HttpContext *pContext) const
+    {   return shouldUpgradeWebSocket(pContext);  }
+    void testClearDeferredWebSocket() {   clearDeferredWebSocket();  }
+    const HttpContext *testGetWebSocketBackend() const
+    {   return m_pWebSocketBackend;  }
+    const AutoStr2 &testGetDeferredWebSocket() const
+    {   return m_sWebSocketUrl;  }
+#endif
 //     HttpResp* getResp()
 //     {   return &m_response; }
 

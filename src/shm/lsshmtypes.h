@@ -108,8 +108,7 @@ typedef v2_comp                 LsShmValComp_fn;
 #define LSSHM_VER_TYPE          \
     (((sizeof(LsShmOffset_t)<<4) | sizeof(LsShmXSize_t)) & (0xff)) // 8 bits
 
-#define LSSHM_PAGESIZE          0x4000  // min pagesize 16k (for 16K-page kernels)
-#define LSSHM_PAGEMASK          0xFFFFC000
+#define LSSHM_PAGESIZE          0x4000  // lower bound for SHM page size
 #define LSSHM_MAXNAMELEN        12      // only 11 characters.
 
 #define LSSHM_SYSSHM            "LsShm"     // default SHM name

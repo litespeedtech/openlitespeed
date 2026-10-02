@@ -121,6 +121,73 @@ TEST(UnpackedHeadersTest_invalidFieldValues)
 }
 
 
+TEST(UnpackedHeadersTest_rejectFragmentInPath)
+{
+    UnpackedHeaders *headers = new UnpackedHeaders();
+    UpkdHdrBuilder builder(headers, false);
+    CHECK(LSXPACK_ERR_BAD_REQ_HEADER ==
+          processHeader(builder, ":path", 5, "/public#private", 15));
+}
+
+
+TEST(UnpackedHeadersTest_requireOriginFormPath)
+{
+    const char *invalid[] =
+    {
+        "relative/path", "http://example.com/path"
+    };
+    for (unsigned i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
+    {
+        UnpackedHeaders *headers = new UnpackedHeaders();
+        UpkdHdrBuilder builder(headers, false);
+        CHECK(LSXPACK_ERR_BAD_REQ_HEADER == processHeader(
+                  builder, ":path", 5, invalid[i], strlen(invalid[i])));
+    }
+}
+
+
+TEST(UnpackedHeadersTest_allowAsteriskFormOnlyForOptions)
+{
+    {
+        UnpackedHeaders *headers = new UnpackedHeaders();
+        UpkdHdrBuilder builder(headers, false);
+        CHECK(LSXPACK_OK == processHeader(builder, ":path", 5, "*", 1));
+        CHECK(LSXPACK_OK == processHeader(builder, ":method", 7,
+                                          "OPTIONS", 7));
+        CHECK(LSXPACK_OK == processHeader(builder, ":scheme", 7,
+                                          "https", 5));
+        CHECK(LSXPACK_OK == processHeader(builder, ":authority", 10,
+                                          "example.com", 11));
+        CHECK(LSXPACK_OK == builder.end());
+    }
+
+    {
+        UnpackedHeaders *headers = new UnpackedHeaders();
+        UpkdHdrBuilder builder(headers, false);
+        CHECK(LSXPACK_OK == processHeader(builder, ":method", 7, "GET", 3));
+        CHECK(LSXPACK_OK == processHeader(builder, ":scheme", 7,
+                                          "https", 5));
+        CHECK(LSXPACK_OK == processHeader(builder, ":authority", 10,
+                                          "example.com", 11));
+        CHECK(LSXPACK_OK == processHeader(builder, ":path", 5, "*", 1));
+        CHECK(LSXPACK_ERR_BAD_REQ_HEADER == builder.end());
+    }
+}
+
+
+TEST(UnpackedHeadersTest_validateScheme)
+{
+    const char *invalid[] = { "1https", "ht_tps", "https bad" };
+    for (unsigned i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
+    {
+        UnpackedHeaders *headers = new UnpackedHeaders();
+        UpkdHdrBuilder builder(headers, false);
+        CHECK(LSXPACK_ERR_BAD_REQ_HEADER == processHeader(
+                  builder, ":scheme", 7, invalid[i], strlen(invalid[i])));
+    }
+}
+
+
 TEST(UnpackedHeadersTest_invalidFieldNames)
 {
     CHECK(LSXPACK_ERR_BAD_REQ_HEADER == processRealHeader("", 0, "v", 1));

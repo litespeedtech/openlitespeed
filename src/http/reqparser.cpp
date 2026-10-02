@@ -186,12 +186,22 @@ int ReqParser::appendArg(int beginIndex, int endIndex, int isValue)
 int ReqParser::normalisePath(int begin, int len)
 {
     int n;
-    m_decodeBuf.append("", 1);
-    n = GPath::clean(m_decodeBuf.getp(begin), len);
-    if (n < len)
-        m_decodeBuf.pop_end(len - n + 1);
-    else
-        m_decodeBuf.pop_end(1);
+    //clean() fails on a parent segment above the root after it has changed
+    //the value in place, so keep a copy to restore the raw value.
+    int copyLen = memmem(m_decodeBuf.getp(begin), len, "..", 2) ? len : 0;
+    if (m_decodeBuf.guarantee(copyLen + 1) == -1)
+        return len;
+    m_decodeBuf.append_unsafe('\0');
+    char *pValue = m_decodeBuf.getp(begin);
+    if (copyLen)
+        m_decodeBuf.append_unsafe(pValue, copyLen);
+    n = GPath::clean(pValue, len);
+    if (n < 0)
+    {
+        memcpy(pValue, pValue + len + 1, len);
+        n = len;
+    }
+    m_decodeBuf.pop_end(len - n + 1 + copyLen);
     return n;
 }
 
@@ -1445,8 +1455,45 @@ void ReqParser::testMultipart()
 
 }
 
+void ReqParser::testMultipartParentPath()
+{
+    char achBufTest[] =
+        "--b\r\n"
+        "Content-Disposition: form-data; name=\"up\"\r\n"
+        "\r\n"
+        "..\r\n"
+        "--b\r\n"
+        "Content-Disposition: form-data; name=\"rel\"\r\n"
+        "\r\n"
+        "x/../y\r\n"
+        "--b\r\n"
+        "Content-Disposition: form-data; name=\"f\"; filename=\"/./../x\"\r\n"
+        "\r\n"
+        "\r\n"
+        "--b--\r\n";
+    const char *pContentType = "multipart/form-data; boundary=b";
+    char achDecoded[] = "up=..&rel=y&f=/./../x";
+    ReqParser parser;
+
+    parser.reset();
+    parser.initMutlipart(pContentType, strlen(pContentType));
+    parser.parseMultipart(achBufTest, sizeof(achBufTest) - 1, 0, 1);
+    assert(memcmp(parser.m_decodeBuf.begin(), achDecoded,
+                  sizeof(achDecoded) - 1) == 0);
+    assert(parser.m_args == 3);
+    assert(parser.m_pArgs[0].keyLen == 2);
+    assert(parser.m_pArgs[0].valueOffset == 3);
+    assert(parser.m_pArgs[0].valueLen == 2);
+    assert(parser.m_pArgs[1].keyOffset == 6);
+    assert(parser.m_pArgs[1].valueLen == 1);
+    assert(parser.m_pArgs[2].keyOffset == 12);
+    assert(parser.m_pArgs[2].valueOffset == 14);
+    assert(parser.m_pArgs[2].valueLen == 7);
+}
+
 void ReqParser::testAll()
 {
     testQueryString();
     testMultipart();
+    testMultipartParentPath();
 }

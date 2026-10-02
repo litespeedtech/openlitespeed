@@ -494,18 +494,14 @@ class DTblRenderer
     private function renderEdit($dlayer, $disp)
     {
         $buf = '';
+        if (($tips = DMsg::GetEditTips([$this->_table->getHelpKey()])) != null) {
+            $buf .= UI::GetTblTips($tips);
+        }
+
         $ref = $disp->GetLastRef();
 
         if ($ref != null && is_array($dlayer)) {
             $dlayer = $dlayer[$ref];
-        }
-
-        $labels = [$this->_table->getHelpKey()];
-        foreach ($this->_table->getAttrs() as $attr) {
-            $labels[] = $attr->_helpKey;
-        }
-        if (($tips = DMsg::GetEditTips($labels)) != null) {
-            $buf .= UI::GetTblTips($tips);
         }
 
         $buf .= '<div class="lst-widget lst-config-edit-widget">' . "\n";

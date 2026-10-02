@@ -34,6 +34,7 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 
 extern "C" {
@@ -79,6 +80,15 @@ int ls_expandfile(int fd, LsShmOffset_t fromsize, LsShmXSize_t incrsize)
 };
 
 
+static LsShmSize_t getShmPageSize()
+{
+    long pagesize = sysconf(_SC_PAGESIZE);
+    if (pagesize < LSSHM_PAGESIZE)
+        return LSSHM_PAGESIZE;
+    return (LsShmSize_t)pagesize;
+}
+
+
 typedef union
 {
     struct
@@ -108,7 +118,7 @@ LsShmVersion s_version =
 {
     { LSSHM_VER_MAJOR, LSSHM_VER_MINOR, LSSHM_VER_REL, LSSHM_VER_TYPE }
 };
-LsShmSize_t LsShm::s_iPageSize = LSSHM_PAGESIZE;
+LsShmSize_t LsShm::s_iPageSize = getShmPageSize();
 LsShmSize_t LsShm::s_iShmHdrSize = ((sizeof(LsShmMap) + 0xf) &
                                     ~0xf); // align 16
 const char *LsShm::s_pDirBase[] = {NULL, NULL, NULL, NULL, NULL};
@@ -785,7 +795,7 @@ LsShmStatus_t LsShm::expand(LsShmXSize_t incrSize)
 
 LsShmStatus_t LsShm::mapAddrMap(LsShmXSize_t size)
 {
-    if (m_addrMap.remap(m_iFd, m_iMaxSizeO, size) == LS_FAIL)
+    if (m_addrMap.remap(m_iFd, m_iMaxSizeO, size, s_iPageSize) == LS_FAIL)
     {
         setErrMsg(LSSHM_SYSERROR, "Unable to mmap [%s], old map size = %lu, size=%lu, %s.",
                   m_pFileName, (unsigned long)m_iMaxSizeO, (unsigned long)size, strerror(errno));
@@ -916,13 +926,10 @@ int LsShm::recoverOrphanShm()
     if ((getGlobalPool() == NULL) || (m_pGHash == NULL))
         return 0;
 
-    m_pGHash->disableAutoLock();
-    m_pGHash->lockChkRehash();
+    LsShmHashAutoLock lock(m_pGHash);
     LsShmSize_t size = m_pGHash->size();
     m_pGHash->for_each2(m_pGHash->begin(), m_pGHash->end(), chkReg, this);
     size -= m_pGHash->size();
-    m_pGHash->unlock();
-    m_pGHash->enableAutoLock();
     return (int)size;
 }
 
@@ -1015,20 +1022,16 @@ LsShmPool *LsShm::getNamedPool(const char *name)
 
 LsShmHash *LsShm::getGlobalHash(int initSize)
 {
-    int isAutoLock;
-
     if (m_pGHash)
         return m_pGHash;
     LsShmPool *gpool = getGlobalPool();
     if (gpool == NULL)
         return NULL;
 
-    isAutoLock = gpool->m_iAutoLock;
-    if (isAutoLock)
-    {
-        gpool->m_iAutoLock = 0;
-        gpool->lock();
-    }
+    // Called from getNamedHash(), which already holds this lock: the guard
+    // takes nothing then, where this used to clear m_iAutoLock and use the
+    // cleared flag as the "the caller has it" marker.
+    LsShmPoolLock lock(gpool, true);
 
     if (!x_pShmMap->x_globalHashOff)
     {
@@ -1042,11 +1045,6 @@ LsShmHash *LsShm::getGlobalHash(int initSize)
                                           LsShmHash::hashXXH32, memcmp,
                                           LSSHM_FLAG_NONE);
 
-    if (isAutoLock)
-    {
-        gpool->unlock();
-        gpool->m_iAutoLock = 1;
-    }
     return m_pGHash;
 }
 

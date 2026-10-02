@@ -45,6 +45,7 @@ ExtWorkerConfig::ExtWorkerConfig(const char *pName)
     , m_iSelfManaged(1)
     , m_iStartByServer(EXTAPP_AUTOSTART_OFF)
     , m_iRefAddr(0)
+    , m_iAltAddr(0)
     , m_iDaemonSuEXEC(0)
     , m_iDropCaps(0)
     , m_uid(-1)
@@ -68,6 +69,7 @@ ExtWorkerConfig::ExtWorkerConfig()
     , m_iSelfManaged(1)
     , m_iStartByServer(EXTAPP_AUTOSTART_OFF)
     , m_iRefAddr(0)
+    , m_iAltAddr(0)
     , m_iDaemonSuEXEC(0)
     , m_iDropCaps(0)
     , m_uid(-1)
@@ -101,6 +103,7 @@ ExtWorkerConfig::ExtWorkerConfig(const ExtWorkerConfig &rhs)
     m_iMaxConns = rhs.m_iMaxConns;
     m_iBuffering = rhs.m_iBuffering;
     m_iRefAddr = rhs.m_iRefAddr;
+    m_iAltAddr = rhs.m_iAltAddr;
     m_iDaemonSuEXEC = rhs.m_iDaemonSuEXEC;
     m_uid = rhs.m_uid;
     m_gid = rhs.m_gid;
@@ -139,7 +142,10 @@ int ExtWorkerConfig::updateServerAddr(const char *pURL)
 {
     if (m_iRefAddr)
         return LS_FAIL;
-    return m_pServerAddr->set(pURL, NO_ANY | DO_NSLOOKUP);
+    int ret = m_pServerAddr->set(pURL, NO_ANY | DO_NSLOOKUP);
+    if (ret == 0)
+        m_iAltAddr = 0;
+    return ret;
 }
 
 
@@ -166,9 +172,15 @@ void ExtWorkerConfig::altServerAddr()
     {
     case AF_UNIX:
         {
-            AutoStr2 s = m_sURL.c_str();
             char *p1 = (char *)m_pServerAddr->getUnix();
             size_t pathLen = strlen(p1);
+            char oldSuffix[4];
+            int replaceSuffix = m_iAltAddr && pathLen >= sizeof(oldSuffix);
+            if (replaceSuffix)
+            {
+                memcpy(oldSuffix, p1 + pathLen - 4, sizeof(oldSuffix));
+                pathLen -= 4;
+            }
             if (pathLen > sizeof(((struct sockaddr_un *)0)->sun_path) - 5)
             {
                 LS_WARN("Unix socket path is too long to generate an alternate address: %s",
@@ -179,8 +191,15 @@ void ExtWorkerConfig::altServerAddr()
             int seq = rand() % 1000;
             ls_snprintf(p, sizeof(((struct sockaddr_un *)0)->sun_path) - pathLen,
                         ".%03d", seq);
+            size_t urlLen = strlen(m_sURL.c_str());
+            if (replaceSuffix && urlLen >= sizeof(oldSuffix) &&
+                memcmp(m_sURL.c_str() + urlLen - sizeof(oldSuffix), oldSuffix,
+                       sizeof(oldSuffix)) == 0)
+                urlLen -= sizeof(oldSuffix);
+            AutoStr2 s(m_sURL.c_str(), urlLen);
             s.append(p, 4);
             m_sURL.setStr(s.c_str());
+            m_iAltAddr = 1;
         }
         break;
     case AF_INET:

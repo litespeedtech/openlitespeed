@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0...3.23)
+
 
 
 #include_directories ("${PROJECT_SOURCE_DIR}/../include")
@@ -7,6 +8,30 @@ cmake_minimum_required(VERSION 3.0)
 #link_directories ("${PROJECT_SOURCE_DIR}/../build/src/modules/modgzip")
 
 enable_testing()
+
+find_program(OLS_NODE_EXECUTABLE NAMES node nodejs)
+if(UNIX AND OLS_NODE_EXECUTABLE)
+    add_test(NAME node_runner_child_supervision
+        COMMAND ${OLS_NODE_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/nodejsrunnerchildtest.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnode.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnodesm.js)
+    set_tests_properties(node_runner_child_supervision PROPERTIES TIMEOUT 45)
+
+    add_test(NAME node_runner_bind_socket
+        COMMAND ${OLS_NODE_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/nodejsrunnerbindsockettest.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnode.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnodesm.js)
+    set_tests_properties(node_runner_bind_socket PROPERTIES TIMEOUT 45)
+
+    add_test(NAME node_runner_regressions
+        COMMAND ${OLS_NODE_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/nodejsrunnerregressiontest.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnode.js
+            ${CMAKE_SOURCE_DIR}/dist/fcgi-bin/lsnodesm.js)
+    set_tests_properties(node_runner_regressions PROPERTIES TIMEOUT 45)
+endif()
 
 # The unit-test binaries link every module statically (prelinkedmods) and never
 # dlopen anything, so they do not need the default -rdynamic. Dropping it lets
@@ -99,6 +124,9 @@ set(OLS_UNITTEST_LIGHT_SRCS
 # link the complete library set with the full harness.
 set(OLS_UNITTEST_FULL_SRCS
 #   extensions/fcgistartertest.cpp
+   extensions/cgidauthtest.cpp
+   extensions/rootchecktest.cpp
+   extensions/extworkerconfigtest.cpp
    h2/unpackedheaderstest.cpp
    http/httpiptogeo2test.cpp
    http/expirestest.cpp
@@ -110,9 +138,11 @@ set(OLS_UNITTEST_FULL_SRCS
    http/contexttreetest.cpp
    http/httpmimetest.cpp
    http/httpcgitooltest.cpp
+   http/httpsessiontest.cpp
    http/chunkostest.cpp
    http/chunkistest.cpp
    http/httplistenerstest.cpp
+   http/ntwkiolinktest.cpp
    http/httpvhostlisttest.cpp
    http/htauthtest.cpp
    http/httpreqtest.cpp

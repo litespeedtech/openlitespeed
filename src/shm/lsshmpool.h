@@ -72,9 +72,12 @@ typedef struct
 } LsShmPoolMapStat;
 
 
+class LsShmPoolLock;
+
 class LsShmPool : public ls_shmpool_s
 {
     friend class LsShm;
+    friend class LsShmPoolLock;
 public:
     LsShmPool();
 
@@ -190,13 +193,30 @@ private:
 
     void mapLock();
     
-    int autoLock()
-    {   return m_iAutoLock ? getShm()->lockRemap(m_pShmLock) 
-                           : (assert(!m_pParent || getShm()->isLocked(m_pShmLock)), 0);   }
+    // Whether the enclosing LsShmPoolLock has to take the lock itself.
+    // False when auto locking is off, so the caller holds it, and false when
+    // this thread already holds it: the SHM locks record the owning task, so
+    // an allocation that re-enters the pool nests instead of deadlocking.
+    // force: take the lock even with auto locking off, for the caller that
+    // has to have it whatever mode the pool is in.
+    bool needLock(bool force = false) const
+    {
+        if (m_pShmLock == NULL)     // not mapped yet, during init()
+            return false;
+        if (!force && m_iAutoLock == 0)
+        {
+            assert(!m_pParent || getShm()->isLocked(m_pShmLock));
+            return false;
+        }
+        return !getShm()->isLocked(m_pShmLock);
+    }
 
-    int autoUnlock()
-    {   assert(!m_pParent || getShm()->isLocked(m_pShmLock));
-        return m_iAutoLock ? ls_shmlock_unlock(m_pShmLock) : 0;     }
+    int lockNow()
+    {   return getShm()->lockRemap(m_pShmLock);      }
+
+    int unlockNow()
+    {   assert(getShm()->isLocked(m_pShmLock));
+        return ls_shmlock_unlock(m_pShmLock);        }
     
     LsShmOffset_t getReg(const char *name);
 
@@ -266,6 +286,59 @@ private:
 #ifdef LSSHM_DEBUG_ENABLE
     friend class debugBase;
 #endif
+};
+
+//
+// Holds the pool lock for the enclosing scope.
+//
+// Whether the lock was taken is kept here, on the stack, so the release can
+// never disagree with the acquire.  Deciding twice from m_iAutoLock is what
+// let a caller that had skipped the lock go on to release it, aborting in
+// ls_shmlock_unlock() on a lock it did not own.
+//
+// A scope that finds the lock already held by this thread takes nothing and
+// releases nothing; the outer scope owns it.
+//
+class LsShmPoolLock
+{
+public:
+    explicit LsShmPoolLock(LsShmPool *pPool, bool force = false)
+        : m_pPool(NULL)
+        , m_iRet(0)
+    {   acquire(pPool, force);      }
+
+    ~LsShmPoolLock()
+    {   release();          }
+
+    // Drop whatever this scope holds and take pPool's lock instead, for the
+    // operations that hand over from the parent pool to their own.
+    int acquire(LsShmPool *pPool, bool force = false)
+    {
+        release();
+        m_iRet = 0;
+        if (pPool->needLock(force))
+        {
+            m_pPool = pPool;
+            m_iRet = pPool->lockNow();
+        }
+        return m_iRet;
+    }
+
+    void release()
+    {
+        if (m_pPool != NULL)
+        {
+            LsShmPool *pPool = m_pPool;
+            m_pPool = NULL;         // clear first, never release twice
+            pPool->unlockNow();
+        }
+    }
+
+private:
+    LsShmPool  *m_pPool;    // NULL when this scope does not hold the lock
+    int         m_iRet;
+
+    LS_NO_COPY_ASSIGN(LsShmPoolLock);
 };
 
 #endif // LSSHMPOOL_H

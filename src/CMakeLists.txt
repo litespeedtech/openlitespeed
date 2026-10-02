@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0...3.23)
 
 link_directories("/usr/lib64")
 
@@ -36,6 +36,9 @@ SET(unittest_STAT_SRCS
    ../test/edio/bufferedostest.cpp
    ../test/edio/multiplexertest.cpp
    ../test/extensions/fcgistartertest.cpp
+   ../test/extensions/cgidauthtest.cpp
+   ../test/extensions/rootchecktest.cpp
+   ../test/extensions/extworkerconfigtest.cpp
    ../test/h2/unpackedheaderstest.cpp
    ../test/http/expirestest.cpp
    ../test/http/rewritetest.cpp
@@ -118,6 +121,8 @@ SET(unittest_STAT_SRCS
 add_executable(openlitespeed ${openlitespeed_SRCS}
     ${unittest_STAT_SRCS}
 )
+# Dynamic modules resolve g_api and other API symbols from the server.
+set_target_properties(openlitespeed PROPERTIES ENABLE_EXPORTS ON)
 
 add_executable(ls_shmstat
     shm/ls_shmstat.cpp

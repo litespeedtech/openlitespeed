@@ -32,6 +32,7 @@
 #include "nsnosandbox.h"
 #include "nspersist.h"
 #include "lscgid.h"
+#include "rootcheck.h"
 #include "use_bwrap.h"
 
 /* Default nosandbox info if neither file exists.  Must be sorted here.  */
@@ -192,52 +193,13 @@ static int split_blob(const char *label, char *blob, int blob_len, int count,
 }
 
 
-/* Environment variable name prefixes/exact names that must be stripped before
- * exec()ing a hostexec program.  These influence the dynamic linker or shell
- * startup and could be abused for privilege escalation if a client can choose
- * the UID we run as.  Even with peer-credential authentication we strip these
- * defensively so that a compromised tenant cannot tamper with another tenant's
- * runtime via LD_PRELOAD/LD_AUDIT/etc. when a misconfiguration allows it. */
-static int env_is_dangerous(const char *e)
-{
-    /* Anything starting with LD_ is a dynamic-linker control variable. */
-    if (strncmp(e, "LD_", 3) == 0)
-        return 1;
-    /* GLIBC tunables can disable security checks. */
-    if (strncmp(e, "GLIBC_TUNABLES=", 15) == 0)
-        return 1;
-    /* Shell startup hooks. */
-    if (strncmp(e, "BASH_ENV=", 9) == 0 ||
-        strncmp(e, "ENV=", 4) == 0 ||
-        strncmp(e, "IFS=", 4) == 0 ||
-        strncmp(e, "PS4=", 4) == 0 ||
-        strncmp(e, "SHELLOPTS=", 10) == 0 ||
-        strncmp(e, "BASHOPTS=", 9) == 0)
-        return 1;
-    /* Language runtime startup hooks. */
-    if (strncmp(e, "PERL5OPT=", 9) == 0 ||
-        strncmp(e, "PERL5LIB=", 9) == 0 ||
-        strncmp(e, "PERLLIB=", 8) == 0 ||
-        strncmp(e, "PYTHONPATH=", 11) == 0 ||
-        strncmp(e, "PYTHONSTARTUP=", 14) == 0 ||
-        strncmp(e, "PYTHONHOME=", 11) == 0 ||
-        strncmp(e, "PYTHONINSPECT=", 14) == 0 ||
-        strncmp(e, "NODE_OPTIONS=", 13) == 0 ||
-        strncmp(e, "NODE_PATH=", 10) == 0 ||
-        strncmp(e, "RUBYOPT=", 8) == 0 ||
-        strncmp(e, "RUBYLIB=", 8) == 0)
-        return 1;
-    return 0;
-}
-
-
 /* Remove dangerous entries from a NULL-terminated env array in place. */
 static void sanitize_env(char **env)
 {
     int r = 0, w = 0;
     while (env[r])
     {
-        if (env_is_dangerous(env[r]))
+        if (rootcheck_env_is_dangerous(env[r]))
         {
             DEBUG_MESSAGE("Stripping dangerous env entry: %s\n", env[r]);
             r++;
@@ -313,7 +275,10 @@ static int set_uid_gid(uid_t uid, gid_t gid)
     {
         rv = setgroups(1, &gid);
         if (rv == -1)
-            ls_stderr("Cannot do setgroups (nonfatal): %s\n", strerror(errno));
+        {
+            ls_stderr("Cannot do setgroups: %s\n", strerror(errno));
+            return -1;
+        }
     }
     rv = setuid(uid);
     if (rv == -1)
@@ -812,7 +777,12 @@ static void cleanup_old_sockets()
 static int write_nosandbox_socket_file()
 {
     char file_name[NOSANDBOX_MAX_FILE_LEN];
-    int fd = open(nosandbox_socket_file(file_name, sizeof(file_name)), O_RDWR | O_CREAT, 0666);
+    struct stat st;
+    size_t left;
+    const char *pos;
+
+    nosandbox_socket_file(file_name, sizeof(file_name));
+    int fd = open(file_name, O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0644);
     if (fd == -1)
     {
         int err = errno;
@@ -820,10 +790,65 @@ static int write_nosandbox_socket_file()
         ls_stderr("Can not open nosandbox file for write: %s: %s\n", file_name, strerror(err));
         return -1;
     }
-    ftruncate(fd, 0);
-    write(fd, s_nosandbox_name, strlen(s_nosandbox_name));
+    if (fstat(fd, &st) == -1)
+    {
+        int err = errno;
+        ls_stderr("Can not inspect hostexec metadata file %s: %s\n",
+                  file_name, strerror(err));
+        close(fd);
+        return -1;
+    }
+    if (!S_ISREG(st.st_mode) || (geteuid() == 0 && st.st_uid != 0))
+    {
+        ls_stderr("Refusing unsafe hostexec metadata file %s\n", file_name);
+        close(fd);
+        return -1;
+    }
+    if (fchmod(fd, 0644) == -1 || ftruncate(fd, 0) == -1)
+    {
+        int err = errno;
+        ls_stderr("Can not prepare hostexec metadata file %s: %s\n",
+                  file_name, strerror(err));
+        close(fd);
+        return -1;
+    }
+
+    pos = s_nosandbox_name;
+    left = strlen(pos);
+    while (left)
+    {
+        ssize_t written = write(fd, pos, left);
+        if (written <= 0)
+        {
+            if (written == -1 && errno == EINTR)
+                continue;
+            int err = written == 0 ? EIO : errno;
+            ls_stderr("Can not write hostexec metadata file %s: %s\n",
+                      file_name, strerror(err));
+            close(fd);
+            return -1;
+        }
+        pos += written;
+        left -= written;
+    }
     close(fd);
     return 0;
+}
+
+
+int nsnosandbox_validate_directory()
+{
+    char directory[NOSANDBOX_MAX_FILE_LEN];
+    char lsws_path[PERSIST_DIR_SIZE];
+
+    if (geteuid() != 0)
+        return 0;
+    snprintf(directory, sizeof(directory), NOSANDBOX_DIR_FMT,
+             ns_lsws_home(lsws_path, sizeof(lsws_path)));
+    if (!check_root_protected_directory(directory))
+        return 0;
+    ls_stderr("Refusing hostexec files in unsafe directory: %s\n", directory);
+    return -1;
 }
 
 
@@ -854,7 +879,7 @@ static int open_nosandbox_socket()
         err = errno;
         DEBUG_MESSAGE("Can not bind on %s: %s\n", loc.sun_path, strerror(err));
         ls_stderr("Can not bind on %s: %s\n", loc.sun_path, strerror(err));
-        ns_done(0);
+        ns_done();
         return -1;
     }
     s_nosandbox_name = realpath(loc.sun_path, NULL);
@@ -866,7 +891,7 @@ static int open_nosandbox_socket()
         if (!s_nosandbox_name)
         {
             ls_stderr("Out of memory resolving nosandbox socket name\n");
-            ns_done(0);
+            ns_done();
             return -1;
         }
     }
@@ -900,7 +925,7 @@ static int open_nosandbox_socket()
     }
     if (write_nosandbox_socket_file())
     {
-        ns_done(0);
+        ns_done();
         return -1;
     }
     s_nosandbox_pid = pid;

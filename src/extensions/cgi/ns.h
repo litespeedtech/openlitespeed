@@ -117,7 +117,7 @@ void ns_setverbose_callback(verbose_callback_t callback);
 * @note This function only unpersists the last one just persisted (if any).
 * @return None.
 **/
-void ns_done();
+void ns_done(void);
 
 /**
 * @fn ns_unpersist_all

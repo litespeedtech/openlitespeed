@@ -22,7 +22,9 @@
 #endif
 
 #include "lscgid.h"
+#include "blake2b.h"
 #include "nspersist.h"
+#include "rootcheck.h"
 
 #include <lsdef.h>
 #include <util/fdpass.h>
@@ -188,7 +190,7 @@ static int init_lve()
 #endif
 #endif
 
-static char         s_pSecret[24];
+static unsigned char s_pSecret[LSCGID_SECRET_LEN];
 static pid_t        s_parent;
 static int          s_run = 1;
 static char         s_sDataBuf[16384];
@@ -215,12 +217,10 @@ static void log_cgi_error(const char *func, const char *arg,
 }
 
 
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 static void set_cgi_error(char *func, char *arg)
 {
     log_cgi_error(func, arg, NULL);
 }
-#endif
 
 static int timed_read(int fd, char *pBuf, int len, int timeout)
 {
@@ -311,7 +311,7 @@ static int cgiError(int fd, int status)
 }
 
 
-static int set_uid_chroot(uid_t uid, gid_t gid, char *pChroot)
+static int set_uid_gid(uid_t uid, gid_t gid)
 {
     int rv;
 
@@ -339,14 +339,8 @@ static int set_uid_chroot(uid_t uid, gid_t gid, char *pChroot)
     {
         rv = setgroups(1, &gid);
         if (rv == -1)
-            log_cgi_error("lscgid: setgroups()", NULL, NULL);
-    }
-    if (pChroot)
-    {
-        rv = chroot(pChroot);
-        if (rv == -1)
         {
-            log_cgi_error("lscgid: chroot()", NULL, NULL);
+            log_cgi_error("lscgid: setgroups()", NULL, NULL);
             return LS_FAIL;
         }
     }
@@ -403,11 +397,11 @@ int apply_rlimits_uid_chroot_stderr(lscgid_t *cgid)
 
     if ((!s_uid) && (req->m_uid || req->m_gid))
     {
-        if (set_uid_chroot(req->m_uid, req->m_gid, cgid->m_pChroot) == -1)
-            return 403;
+        if (set_uid_gid(req->m_uid, req->m_gid) == -1)
+            return 500;
     }
 
-    if (cgid->m_stderrPath)
+    if (cgid->m_stderrPath && geteuid() != 0)
         changeStderrLog(cgid);
 
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
@@ -586,46 +580,26 @@ static int cgroup_process(lscgid_t *pCGI)
 #endif
 
 
-//called before uid/gid/chroot change.
-static int fixStderrLogPermission(lscgid_t *pCGI)
-{
-    struct stat st;
-    const char *path = pCGI->m_stderrPath;
-
-    if (lstat(path, &st) == -1)
-        return 0;
-    if (S_ISLNK(st.st_mode))
-        return -1;
-    if (st.st_uid != pCGI->m_data.m_uid && pCGI->m_data.m_uid > 0)
-    {
-        pCGI->m_stderrPath = NULL;
-        int newfd = open(path, O_WRONLY | O_APPEND, 0644);
-        if (newfd == -1)
-        {
-            ls_stderr("lscgid (%d): failed to open stderr: %s\n",
-                      getpid(), path);
-            return -1;
-        }
-        if (newfd != 2)
-        {
-            dup2(newfd, 2);
-            close(newfd);
-        }
-    }
-    return 0;
-}
-
-
 static int execute_cgi(lscgid_t *pCGI)
 {
     char ch;
     uint32_t pid = (uint32_t)getpid();
 
+    /* Detached command mode executes request-supplied shell text rather than
+     * the executable path carried by the request.  There is therefore no
+     * filesystem object whose ownership can authorize running it as root. */
+    if (geteuid() == 0 && pCGI->m_data.m_uid == 0 &&
+        **pCGI->m_argv == '&')
+    {
+        static char reason[] =
+            "lscgid: detached command execution is forbidden as root";
+        errno = EACCES;
+        set_cgi_error(reason, NULL);
+        return 403;
+    }
+
     setsid();
     //applyLimits(&pCGI->m_data);
-
-    if (pCGI->m_stderrPath)
-        fixStderrLogPermission(pCGI);
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     if (pCGI->m_cgroup && pCGI->m_data.m_uid != 0)
@@ -702,6 +676,12 @@ static int execute_cgi(lscgid_t *pCGI)
     }
 #endif
 
+    if (pCGI->m_pChroot && chroot(pCGI->m_pChroot) == -1)
+    {
+        log_cgi_error("lscgid: chroot()", NULL, NULL);
+        return 403;
+    }
+
     ch = *(pCGI->m_argv[0]);
     * pCGI->m_argv[0] = 0;
     const char *dir = pCGI->m_cwdPath;
@@ -724,16 +704,21 @@ static int execute_cgi(lscgid_t *pCGI)
     *(pCGI->m_argv[0]) = ch;
     if (ch == '&')
     {
+        static char shell_path[] = "/bin/sh";
         static const char sHeader[] = "Status: 200\r\n\r\n";
         writeall(STDOUT_FILENO, sHeader, sizeof(sHeader) - 1);
-        pCGI->m_pCGIDir = (char *)"/bin/sh";
-        pCGI->m_argv[0] = (char *)"/bin/sh";
+        pCGI->m_pCGIDir = shell_path;
+        pCGI->m_argv[0] = shell_path;
     }
     else
     {
         //pCGI->m_argv[0] = strdup( pCGI->m_pCGIDir );
         pCGI->m_argv[0] = pCGI->m_pCGIDir;
     }
+
+    int path_rc = check_root_exec_path(pCGI);
+    if (path_rc)
+        return path_rc;
 
     umask(pCGI->m_data.m_umask);
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
@@ -746,8 +731,9 @@ static int execute_cgi(lscgid_t *pCGI)
     }
 #endif
 
-    if (apply_rlimits_uid_chroot_stderr(pCGI) == 403)
-        return 403;
+    int apply_rc = apply_rlimits_uid_chroot_stderr(pCGI);
+    if (apply_rc)
+        return apply_rc;
 
     //ls_stderr( "execute_cgi m_umask=%03o\n", pCGI->m_data.m_umask );
     if (execve(pCGI->m_pCGIDir, pCGI->m_argv, pCGI->m_env) == -1)
@@ -827,7 +813,16 @@ static int process_req_data(lscgid_t *cgi_req)
         cgi_req->m_env[i] = p;
         //ls_stderr("env %d, len=%d, str=%s\n", i, len, cgi_req->m_env[i]);
 
-        if (*p == 'L')
+        /* A process which remains uid 0 does not get the dynamic loader's
+         * secure-execution filtering.  Strip all shared loader/runtime startup
+         * controls at this privilege boundary, while preserving them for
+         * non-root applications which may legitimately need them. */
+        if (cgi_req->m_data.m_uid == 0 && rootcheck_env_is_dangerous(p))
+        {
+            --i;
+            --cgi_req->m_data.m_nenv;
+        }
+        else if (*p == 'L')
         {
             if (strncasecmp(p, "LS_STDERR_LOG=", 14) == 0)
             {
@@ -884,29 +879,41 @@ static int process_req_data(lscgid_t *cgi_req)
 #define MAX_CGI_DATA_LEN 65536
 static int process_req_header(lscgid_t *cgi_req)
 {
-    char achMD5[16];
-    int totalBufLen;
-    memmove(achMD5, cgi_req->m_data.m_md5, 16);
-    memmove(cgi_req->m_data.m_md5, s_pSecret, 16);
-    StringTool::getMd5((const char *)&cgi_req->m_data,
-                       sizeof(lscgid_req), cgi_req->m_data.m_md5);
-   if (memcmp(cgi_req->m_data.m_md5, achMD5, 16) != 0)
+    size_t dataLen;
+    size_t alignedDataLen;
+    size_t pointerCount;
+    size_t totalBufLen;
+
+    if (cgi_req->m_data.m_version != LSCGID_VERSION_2)
     {
-        log_cgi_error("lscgid", NULL, "request validation failed!");
+        log_cgi_error("lscgid", NULL, "unsupported request version!");
         return 500;
     }
-    totalBufLen = cgi_req->m_data.m_szData + sizeof(char *) *
-                  (cgi_req->m_data.m_nargv + cgi_req->m_data.m_nenv);
-    if ((unsigned int)totalBufLen < sizeof(s_sDataBuf))
+    if (cgi_req->m_data.m_szData < 0 || cgi_req->m_data.m_nenv < 1
+        || cgi_req->m_data.m_nargv < 2)
+    {
+        log_cgi_error("lscgid", NULL, "invalid cgi header counts");
+        return 500;
+    }
+    dataLen = (size_t)cgi_req->m_data.m_szData;
+    if (dataLen > MAX_CGI_DATA_LEN)
+    {
+        log_cgi_error("lscgid", NULL, "cgi header data is too big");
+        return 500;
+    }
+    alignedDataLen = (dataLen + 7) & ~(size_t)7;
+    pointerCount = (size_t)cgi_req->m_data.m_nargv
+                 + (size_t)cgi_req->m_data.m_nenv;
+    if (pointerCount > (MAX_CGI_DATA_LEN - alignedDataLen) / sizeof(char *))
+    {
+        log_cgi_error("lscgid", NULL, "cgi header data is too big");
+        return 500;
+    }
+    totalBufLen = alignedDataLen + pointerCount * sizeof(char *);
+    if (totalBufLen < sizeof(s_sDataBuf))
         cgi_req->m_pBuf = s_sDataBuf;
     else
     {
-        if (totalBufLen > MAX_CGI_DATA_LEN)
-        {
-            log_cgi_error("lscgid", NULL, "cgi header data is too big");
-            return 500;
-
-        }
         cgi_req->m_pBuf = (char *)malloc(totalBufLen);
         if (!cgi_req->m_pBuf)
         {
@@ -914,10 +921,50 @@ static int process_req_header(lscgid_t *cgi_req)
             return 500;
         }
     }
-    cgi_req->m_argv = (char **)(cgi_req->m_pBuf + ((cgi_req->m_data.m_szData +
-                                7) & ~7L));
-    cgi_req->m_env = (char **)(cgi_req->m_argv + sizeof(char *) *
-                               cgi_req->m_data.m_nargv);
+    cgi_req->m_argv = (char **)(cgi_req->m_pBuf + alignedDataLen);
+    cgi_req->m_env = cgi_req->m_argv + cgi_req->m_data.m_nargv;
+    return 0;
+}
+
+
+static int secure_tag_equal(const unsigned char *a, const unsigned char *b,
+                            size_t len)
+{
+    volatile unsigned char different = 0;
+    size_t i;
+
+    for (i = 0; i < len; ++i)
+        different |= a[i] ^ b[i];
+    return different == 0;
+}
+
+
+static int verify_req_mac(lscgid_t *cgi_req)
+{
+    blake2b_ctx ctx;
+    unsigned char supplied[LSCGID_MAC_LEN];
+    unsigned char expected[LSCGID_MAC_LEN];
+    int result;
+
+    memcpy(supplied, cgi_req->m_data.m_md5, sizeof(supplied));
+    memset(cgi_req->m_data.m_md5, 0, sizeof(cgi_req->m_data.m_md5));
+    result = blake2b_init_key(&ctx, sizeof(expected), s_pSecret,
+                              sizeof(s_pSecret));
+    if (result == 0)
+        result = blake2b_update(&ctx, &cgi_req->m_data,
+                                sizeof(cgi_req->m_data));
+    if (result == 0)
+        result = blake2b_update(&ctx, cgi_req->m_pBuf,
+                                (size_t)cgi_req->m_data.m_szData);
+    if (result == 0)
+        result = blake2b_final(&ctx, expected, sizeof(expected));
+    memcpy(cgi_req->m_data.m_md5, supplied, sizeof(supplied));
+
+    if (result != 0 || !secure_tag_equal(expected, supplied, sizeof(expected)))
+    {
+        log_cgi_error("lscgid", NULL, "request validation failed!");
+        return 500;
+    }
     return 0;
 }
 
@@ -942,18 +989,16 @@ static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
     //ls_stderr("1 Proc: %ld, data: %ld\n", cgi_req->m_data.m_nproc.rlim_cur,
     //                        cgi_req->m_data.m_data.rlim_cur );
 
-    if (cgi_req->m_data.m_type == LSCGID_TYPE_SUEXEC)
-    {
-        uint32_t pid = (uint32_t)getpid();
-        write(STDOUT_FILENO, (const void *)&pid, sizeof(pid));
-    }
-
     cur = time(NULL);
     timeout -= cur - begin;
     ret = timed_read(fd, cgi_req->m_pBuf,
                      cgi_req->m_data.m_szData, timeout);
     if (ret == -1)
         return 500;
+
+    ret = verify_req_mac(cgi_req);
+    if (ret)
+        return ret;
 
     ret = process_req_data(cgi_req);
     if (ret)
@@ -963,6 +1008,8 @@ static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
     }
     if (cgi_req->m_data.m_type == LSCGID_TYPE_SUEXEC)
     {
+        uint32_t pid = (uint32_t)getpid();
+        write(STDOUT_FILENO, (const void *)&pid, sizeof(pid));
         //cgi_req->m_fdReceived = recv_fd( fd );
         char nothing;
         if ((FDPass::readFd(fd, &nothing, 1, &cgi_req->m_fdReceived) == -1) ||
@@ -1275,8 +1322,9 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
     my_signal(SIGUSR1, sigusr1);
     signal(SIGPIPE, SIG_IGN);
     s_uid = geteuid();
+    rootcheck_set_error_callback(set_cgi_error);
 
-    memcpy(s_pSecret, secret, 16);
+    memcpy(s_pSecret, secret, sizeof(s_pSecret));
 
 #ifdef HAS_CLOUD_LINUX
 

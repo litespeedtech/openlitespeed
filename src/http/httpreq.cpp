@@ -83,6 +83,176 @@ static int parseContentLength(const char *pCur, const char *pEnd,
     return 0;
 }
 
+static bool isReqTargetValid(const char *value, int len)
+{
+    const unsigned char *p = (const unsigned char *)value;
+    const unsigned char *end = p + len;
+    bool query = false;
+    for (; p < end; ++p)
+    {
+        if (*p < 0x20 || *p == 0x7f || *p == '#')
+            return false;
+        if (*p == '?')
+            query = true;
+        else if (*p == '\\' && !query)
+            return false;
+    }
+    return true;
+}
+
+static bool isDecodedReqPathValid(const char *value, int len)
+{
+    const unsigned char *p = (const unsigned char *)value;
+    const unsigned char *end = p + len;
+    for (; p < end; ++p)
+        if (*p < 0x20 || *p == 0x7f || *p == '\\')
+            return false;
+    return true;
+}
+
+
+static int normalizeDecodedReqPath(char *value, int len)
+{
+    if (len <= 0 || *value != '/' || !isDecodedReqPathValid(value, len))
+        return LS_FAIL;
+    int normalizedLen = GPath::clean(value, len);
+    return normalizedLen > 0 ? normalizedLen : LS_FAIL;
+}
+
+
+static int decodeReqPath(const char *pSrc, int len, char *pDest)
+{
+    const char *pEnd = pSrc + len;
+    const char *pEscape = (const char *)memchr(pSrc, '%', len);
+    if (!pEscape)
+    {
+        memcpy(pDest, pSrc, len);
+        return len;
+    }
+
+    const char *p = pSrc;
+    char *pOut = pDest;
+    while (p < pEnd)
+    {
+        unsigned char ch = *p++;
+        if (ch == '%')
+        {
+            if (pEnd - p < 2
+                || !isxdigit((unsigned char)p[0])
+                || !isxdigit((unsigned char)p[1]))
+                return LS_FAIL;
+            ch = (hexdigit(p[0]) << 4) + hexdigit(p[1]);
+            p += 2;
+        }
+        else if (ch == '/' && p < pEnd && *p == '/'
+                 && (p - pSrc < 2 || p[-2] != ':'))
+            continue;
+        *pOut++ = ch;
+    }
+    return pOut - pDest;
+}
+
+
+static bool isReqSchemeValid(const char *value, int len)
+{
+    if (len <= 0
+        || !((*value >= 'A' && *value <= 'Z')
+             || (*value >= 'a' && *value <= 'z')))
+        return false;
+    const unsigned char *p = (const unsigned char *)value + 1;
+    const unsigned char *end = (const unsigned char *)value + len;
+    for (; p < end; ++p)
+        if (!((*p >= '0' && *p <= '9')
+              || (*p >= 'A' && *p <= 'Z')
+              || (*p >= 'a' && *p <= 'z'))
+            && *p != '+' && *p != '-' && *p != '.')
+            return false;
+    return true;
+}
+
+static int getAuthorityHostLen(const char *value, int len)
+{
+    if (len <= 0)
+        return -1;
+
+    const char *end = value + len;
+    const char *hostEnd;
+    bool bracketed = *value == '[';
+    if (bracketed)
+    {
+        hostEnd = (const char *)memchr(value + 1, ']', end - value - 1);
+        if (hostEnd == NULL || hostEnd == value + 1)
+            return -1;
+        ++hostEnd;
+    }
+    else
+    {
+        hostEnd = (const char *)memchr(value, ':', len);
+        if (hostEnd == NULL)
+            hostEnd = end;
+        if (hostEnd == value)
+            return -1;
+    }
+
+    const unsigned char *p = (const unsigned char *)value;
+    const unsigned char *hostPartEnd = (const unsigned char *)hostEnd;
+    for (; p < hostPartEnd; ++p)
+    {
+        if (*p <= 0x20 || *p >= 0x7f)
+            return -1;
+        switch (*p)
+        {
+        case '/': case '\\': case '?': case '#': case '@': case ',':
+            return -1;
+        case '[':
+            if (!bracketed || p != (const unsigned char *)value)
+                return -1;
+            break;
+        case ']':
+            if (!bracketed || p + 1 != hostPartEnd)
+                return -1;
+            break;
+        case '%':
+            if (p + 2 >= hostPartEnd || !isxdigit(p[1]) || !isxdigit(p[2]))
+                return -1;
+            p += 2;
+            break;
+        default:
+            break;
+        }
+    }
+
+    if (hostEnd < end)
+    {
+        if (*hostEnd++ != ':' || hostEnd == end)
+            return -1;
+        unsigned port = 0;
+        for (const char *portChar = hostEnd; portChar < end; ++portChar)
+        {
+            if (!isdigit((unsigned char)*portChar))
+                return -1;
+            port = port * 10 + (*portChar - '0');
+            if (port > 65535)
+                return -1;
+        }
+    }
+    return hostPartEnd - (const unsigned char *)value;
+}
+
+
+bool HttpReq::isNewHostValid() const
+{
+    int len = ls_str_len(&m_newHost);
+    return len == 0 || getAuthorityHostLen(ls_str_cstr(&m_newHost), len) >= 0;
+}
+
+
+int HttpReq::getNewHostNameLen() const
+{
+    int len = ls_str_len(&m_newHost);
+    return len > 0 ? getAuthorityHostLen(ls_str_cstr(&m_newHost), len) : 0;
+}
+
 struct envAlias_t
 {
     const char *orgName;
@@ -108,7 +278,7 @@ static char *escape_uri(char *p, char *pEnd, const char *pURI, int uriLen)
     while ((pURI < pURIEnd) && (p < pEnd))
     {
         ch = *pURI++;
-        if (isalnum(ch))
+        if (isalnum((unsigned char)ch))
             *p++ = ch;
         else
         {
@@ -144,6 +314,71 @@ static char *escape_uri(char *p, char *pEnd, const char *pURI, int uriLen)
 }
 
 
+//Encode a decoded request path for an origin-form request line. RFC 3986
+//pchar and '/' stay literal, since percent-encoding sub-delims or '@'
+//changes what path the backend sees. An already encoded path keeps its valid
+//escapes.
+static char *escape_req_path(char *p, const char *path, int pathLen,
+                             bool encoded)
+{
+    const unsigned char *src = (const unsigned char *)path;
+    const unsigned char *end = src + pathLen;
+    while (src < end)
+    {
+        unsigned char ch = *src++;
+        if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+            || (ch >= '0' && ch <= '9'))
+        {
+            *p++ = ch;
+            continue;
+        }
+        switch (ch)
+        {
+        case '-': case '.': case '_': case '~':
+        case '!': case '$': case '&': case '\'': case '(': case ')':
+        case '*': case '+': case ',': case ';': case '=':
+        case ':': case '@': case '/':
+            *p++ = ch;
+            break;
+        case '%':
+            if (encoded && end - src >= 2 && isxdigit(src[0])
+                && isxdigit(src[1]))
+            {
+                *p++ = ch;
+                break;
+            }
+        //fall through
+        default:
+            *p++ = '%';
+            *p++ = s_hex[ch >> 4];
+            *p++ = s_hex[ch & 0xf];
+            break;
+        }
+    }
+    return p;
+}
+
+
+static char *escape_req_query(char *p, const char *query, int queryLen)
+{
+    const unsigned char *src = (const unsigned char *)query;
+    const unsigned char *end = src + queryLen;
+    while (src < end)
+    {
+        unsigned char ch = *src++;
+        if (ch > 0x20 && ch != 0x7f && ch != '#')
+            *p++ = ch;
+        else
+        {
+            *p++ = '%';
+            *p++ = s_hex[ch >> 4];
+            *p++ = s_hex[ch & 0xf];
+        }
+    }
+    return p;
+}
+
+
 HttpReq::HttpReq()
     : m_pSslConn(NULL)
     , m_headerBuf(HEADER_BUF_INIT_SIZE)
@@ -173,6 +408,7 @@ HttpReq::HttpReq()
     m_iBodyType = REQ_BODY_UNKNOWN;
     m_cookies.init();
     m_pUrlStaticFileData = NULL;
+    m_pEncodedURI = NULL;
 }
 
 
@@ -220,6 +456,7 @@ void HttpReq::reset(int discard)
     m_pHttpHandler = NULL;
     m_pSslConn = NULL;
     resetHeaderBuf(discard);
+    m_upgradeProto = UPD_PROTO_NONE;
     m_pRealPath = NULL;
     ls_xpool_reset(m_pPool);
     ls_xpool_skipfree(m_pPool);
@@ -234,6 +471,7 @@ void HttpReq::reset(int discard)
     m_pRange = NULL;
     m_lastStatPath.setStr("");
     m_pUrlStaticFileData = NULL;
+    m_pEncodedURI = NULL;
 }
 
 
@@ -539,6 +777,12 @@ void HttpReq::classifyUrl()
 
 int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
 {
+    int reqLineOverhead = header->getMethodLen() + 12;
+    int maxReqLineLen = HttpServerConfig::getInstance().getMaxURLLen();
+    if (reqLineOverhead > maxReqLineLen
+        || header->getUrlLen() > maxReqLineLen - reqLineOverhead)
+        return SC_414;
+
     AutoBuf *buf = header->getBuf();
     LS_DBG_L(getLogSession(), "zero-copy unpacked headers: %d, "
             "method len: %d, url len: %d.", buf->size(),
@@ -598,17 +842,18 @@ int HttpReq::processRequestLine()
     const char *pLineEnd;
     while ((pLineEnd = (const char *)memchr(pCur, '\n', pBEnd - pCur)) != NULL)
     {
+        if (pLineEnd == pCur || pLineEnd[-1] != '\r')
+            return SC_400;
         isLongLine = 0;
-        while (pCur < pLineEnd)
+        if (pLineEnd == pCur + 1)
         {
-            if (!isspace(*pCur))
-                break;
-            ++pCur;
+            pCur = pLineEnd + 1;
+            m_iReqHeaderBufFinished = pCur - m_headerBuf.begin();
+            continue;
         }
-        if (pCur != pLineEnd)
-            break;
-        ++pCur;
-        m_iReqHeaderBufFinished = pCur - m_headerBuf.begin();
+        if (isspace((unsigned char)*pCur))
+            return SC_400;
+        break;
     }
     if (pLineEnd == NULL)
     {
@@ -636,11 +881,10 @@ int HttpReq::processRequestLine()
                 m_headerBuf.size(), m_headerBuf.begin());
         return result;
     }
-
-    pCur = p + 1;
-    while ((p < pLineEnd) && ((*p == ' ') || (*p == '\t')))
-        ++p;
-    pCur = p;
+    if (p >= pLineEnd || *p != ' ' || p + 1 >= pLineEnd
+        || p[1] == ' ' || p[1] == '\t')
+        return SC_400;
+    pCur = ++p;
     result = parseHost(pCur, pLineEnd);
     if (result)
     {
@@ -648,8 +892,17 @@ int HttpReq::processRequestLine()
                 m_headerBuf.size(), m_headerBuf.begin());
         return result;
     }
-    p += m_iHostLen;
-    pCur = (char *)memchr(p, '/', (pLineEnd - p));
+    if (m_iHostOff)
+        p = m_headerBuf.begin() + m_iHostOff + m_iHostLen;
+    if (*p == '*')
+    {
+        //asterisk-form is only valid as the whole request target
+        if (p + 1 >= pLineEnd || p[1] != ' ')
+            return SC_400;
+        pCur = p;
+    }
+    else
+        pCur = (char *)memchr(p, '/', (pLineEnd - p));
     //FIXME:should we handle other cases?
     if (!pCur || pCur > pLineEnd)
     {
@@ -666,6 +919,8 @@ int HttpReq::processRequestLine()
         return SC_400;
     }
     m_reqURLOff = pCur - m_headerBuf.begin();
+    if (!isReqTargetValid(pCur, p - pCur))
+        return SC_400;
     result = parseURL(pCur, p);
     if (result)
     {
@@ -674,14 +929,10 @@ int HttpReq::processRequestLine()
         return result;
     }
 
+    if (*p != ' ' || p + 1 >= pLineEnd
+        || p[1] == ' ' || p[1] == '\t')
+        return SC_400;
     pCur = p + 1;
-    while (p < pLineEnd && (*p == ' ' || *p == '\t' || *p == '\r'))
-    {
-        if (*p != ' ')
-            *(char *)p = ' ';
-        ++p;
-    }
-    pCur = p;
 
     result = parseProtocol(pCur, pLineEnd);
     if (result)
@@ -715,7 +966,7 @@ int HttpReq::parseProtocol(const char *&pCur, const char *pBEnd)
 {
     if (pBEnd - pCur < 8)
         return SC_400;
-    if (strncasecmp(pCur, "http/1.", 7) != 0)
+    if (memcmp(pCur, "HTTP/1.", 7) != 0)
         return SC_400;
     pCur += 7;
     {
@@ -770,11 +1021,25 @@ int HttpReq::parseURI(const char *pCur, const char *pBEnd)
 {
     int len = pBEnd - pCur;
     char *p = (char *)ls_xpool_alloc(m_pPool, len + URL_INDEX_PAD);
-    int n = HttpUtil::unescape(p, len, pCur);
-    --n;
-    n = GPath::clean(p, n);
-    if (n <= 0)
+    if (len == 1 && *pCur == '*')
+    {
+        if (m_method != HttpMethod::HTTP_OPTIONS)
+            return SC_400;
+        *p = '*';
+        p[1] = 0;
+        uSetURI(p, 1);
+        return 0;
+    }
+    int n = decodeReqPath(pCur, len, p);
+    if (n == LS_FAIL)
         return SC_400;
+    p[n] = 0;
+    n = normalizeDecodedReqPath(p, n);
+    if (n == LS_FAIL)
+    {
+        LS_INFO(getLogSession(), "Status 400: invalid decoded request URI!");
+        return SC_400;
+    }
     *(p + n) = '\0';
     uSetURI(p, n);
     return 0;
@@ -784,14 +1049,15 @@ int HttpReq::parseURI(const char *pCur, const char *pBEnd)
 int HttpReq::parseHost(const char *pCur, const char *pBEnd)
 {
     //nohost case, return directly
-    if ((*pCur == '/') || (*pCur == '%'))
+    if ((*pCur == '/') || (*pCur == '%') || (*pCur == '*'))
         return 0;
 
     const char *pHost;
     pHost = (const char *)memchr(pCur, ':', pBEnd - pCur);
     if ((pHost) && (pHost + 2 < pBEnd))
     {
-        if ((*(pHost + 1) != '/') || (*(pHost + 2) != '/'))
+        if (!isReqSchemeValid(pCur, pHost - pCur)
+            || (*(pHost + 1) != '/') || (*(pHost + 2) != '/'))
             return SC_400;
     }
     else
@@ -805,7 +1071,11 @@ int HttpReq::parseHost(const char *pCur, const char *pBEnd)
     if (pHostEnd != NULL)
     {
         m_iHostLen = pHost - pCur;
-        postProcessHost(pHost , pHostEnd);
+        int result = postProcessHost(pHost, pHostEnd);
+        if (result)
+            return result;
+        m_iHostOff = pHost - m_headerBuf.begin();
+        setNewHost(pHost, pHostEnd - pHost);
     }
     else
     {
@@ -866,10 +1136,11 @@ int HttpReq::processHeaderLines()
     int nameLen;
     int ret = 0;
 
-    m_upgradeProto = UPD_PROTO_NONE; //0;
     while ((pLineEnd  = (const char *)memchr(pLineBegin, '\n',
                         pBEnd - pLineBegin)) != NULL)
     {
+        if (pLineEnd == pLineBegin || pLineEnd[-1] != '\r')
+            return SC_400;
         pColon = (const char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
         if (pColon != NULL)
         {
@@ -891,6 +1162,8 @@ int HttpReq::processHeaderLines()
                 pLineEnd  = (const char *)memchr(pLineEnd, '\n', pBEnd - pLineEnd);
                 if (pLineEnd == NULL)
                     return 1;
+                else if (pLineEnd[-1] != '\r')
+                    return SC_400;
                 else
                     continue;
             }
@@ -931,7 +1204,11 @@ int HttpReq::processHeaderLines()
                 else
                 {
                     if (index == HttpHeader::H_HOST)
-                        *((char *)pLineBegin + 3) = '2';
+                    {
+                        LS_INFO(getLogSession(), "Status 400: duplicate Host "
+                                "header!");
+                        return SC_400;
+                    }
                     else if (index == HttpHeader::H_CONTENT_LENGTH)
                     {
                         LS_INFO(getLogSession(), "Status 400: duplicate content-length!");
@@ -939,8 +1216,15 @@ int HttpReq::processHeaderLines()
                     }
                     else if (index == HttpHeader::H_TRANSFER_ENCODING)
                     {
-                        LS_INFO(getLogSession(), "Remove duplicate transfer-encoding header!");
-                        memset((void *)pLineBegin, 'x', nameLen);
+                        LS_INFO(getLogSession(), "Status 400: duplicate "
+                                "Transfer-Encoding header!");
+                        return SC_400;
+                    }
+                    else if (index == HttpHeader::H_AUTHORIZATION)
+                    {
+                        LS_INFO(getLogSession(), "Status 400: duplicate "
+                                "Authorization header!");
+                        return SC_400;
                     }
                     index = HttpHeader::H_HEADER_END;
                 }
@@ -950,6 +1234,20 @@ int HttpReq::processHeaderLines()
             {
                 if (m_otherHeaderLen[ index - HttpHeader::H_TE] == 0)
                 {
+                    int valLen = pTemp1 - pTemp;
+                    if (index == HttpHeader::H_UPGRADE)
+                    {
+                        if (valLen == 9 && strncasecmp(pTemp, "websocket", 9) == 0)
+                            m_upgradeProto = UPD_PROTO_WEBSOCKET;
+                        else if (valLen >= 3 && strncasecmp(pTemp, "h2c", 3) == 0)
+                        {
+                            m_upgradeProto = UPD_PROTO_HTTP2;
+                            //Destroy it, to avoid loop calling
+                            *(char *)pLineBegin = 'x';
+                            pLineBegin = pLineEnd + 1;
+                            continue;
+                        }
+                    }
                     m_otherHeaderLen[ index - HttpHeader::H_TE] = pTemp1 - pTemp;
                     m_otherHeaderOffset[index - HttpHeader::H_TE] = pTemp - m_headerBuf.begin();
                 }
@@ -991,6 +1289,13 @@ int HttpReq::processHeaderLines()
     m_iReqHeaderBufFinished = pLineBegin - m_headerBuf.begin();
     if (headerfinished)
     {
+        if (m_ver == HTTP_1_1
+            && !isHeaderSet(HttpHeader::H_HOST))
+        {
+            LS_INFO(getLogSession(), "Status 400: HTTP/1.1 request has no "
+                    "Host header!");
+            return SC_400;
+        }
         m_iHttpHeaderEnd = m_iReqHeaderBufFinished;
         m_iReqHeaderBufRead = m_headerBuf.size();
         m_iHeaderStatus = HEADER_OK;
@@ -1118,6 +1423,12 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
                         LS_INFO(getLogSession(), "Status 400: duplicate content-length!");
                         return SC_400;
                     }
+                    if (index == HttpHeader::H_AUTHORIZATION)
+                    {
+                        LS_INFO(getLogSession(), "Status 400: duplicate "
+                                "Authorization header!");
+                        return SC_400;
+                    }
                     if (index == HttpHeader::H_HOST && begin->name_len == 4)
                     {
                         *((char *)name + 3) = '2';
@@ -1177,7 +1488,17 @@ int HttpReq::processHeader(int index)
         if (m_iHostOff == 0)
         {
             m_iHostOff = m_commonHeaderOffset[index];
-            postProcessHost(pCur, pBEnd);
+            ret = postProcessHost(pCur, pBEnd);
+            if (ret)
+                return ret;
+        }
+        else if (getNewHostLen() > 0
+                 && (getNewHostLen() != len
+                     || strncasecmp(getNewHost(), pCur, len) != 0))
+        {
+            LS_INFO(getLogSession(), "Status 400: Host does not match "
+                    "absolute request target!");
+            return SC_400;
         }
         break;
     case HttpHeader::H_CONTENT_LENGTH:
@@ -1198,6 +1519,12 @@ int HttpReq::processHeader(int index)
         if (*pCur == ',')
         {
             LS_INFO(getLogSession(), "Status 400: bad Transfer-Encoding starts with ','!");
+            return SC_400;
+        }
+        if (isHeaderSet(HttpHeader::H_CONTENT_LENGTH))
+        {
+            LS_INFO(getLogSession(), "Status 400: both Transfer-Encoding and "
+                    "Content-Length are present!");
             return SC_400;
         }
         if (len == 7 && strncasecmp(pCur, "chunked", 7) == 0)
@@ -1246,10 +1573,15 @@ int HttpReq::processHeader(int index)
 int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
                                   const char *name, const char *value)
 {
+    LS_DBG_L(getLogSession(), "process unknown header '%.*s':'%.*s'",
+             pCurHeader->keyLen, name, pCurHeader->valLen, value);
     if (pCurHeader->keyLen == 7 && strncasecmp(name, "Upgrade", 7) == 0)
     {
         if (pCurHeader->valLen == 9 && strncasecmp(value, "websocket", 9) == 0)
+        {
+            LS_DBG_L(getLogSession(), "mark for websocket upgrade");
             m_upgradeProto = UPD_PROTO_WEBSOCKET;
+        }
         else if (pCurHeader->valLen >= 3 && strncasecmp(value, "h2c", 3) == 0)
         {
             m_upgradeProto = UPD_PROTO_HTTP2;
@@ -1278,14 +1610,6 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
             m_iReqFlag |= IS_FORWARDED_HTTPS;
         }
     }
-    else if ((pCurHeader->keyLen == 9
-                && strncasecmp(name, "X-LSCACHE", 9) == 0)
-                || (pCurHeader->keyLen == 10
-                    &&strncasecmp(name, "X-LITEMAGE", 10) == 0))
-    {
-        m_iContextState |= LSCACHE_FRONTEND;
-        addEnv("LSCACHE_FRONTEND", 16, "1", 1);
-    }
     else if (pCurHeader->keyLen == 5
                 && (strncasecmp(name, "proxy", 5) == 0))
     {
@@ -1307,9 +1631,31 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
      return 0;
 }
 
+
+void HttpReq::processCacheFrontendHeader(bool trusted)
+{
+    if (!trusted || (m_iContextState & LSCACHE_FRONTEND))
+        return;
+
+    int valueLen;
+    if (getHeader("X-LSCACHE", 9, valueLen)
+        || getHeader("X-LITEMAGE", 10, valueLen))
+    {
+        m_iContextState |= LSCACHE_FRONTEND;
+        addEnv("LSCACHE_FRONTEND", 16, "1", 1);
+    }
+}
+
 int HttpReq::postProcessHost(const char *pCur, const char *pBEnd)
 {
-    const char *pstrfound;
+    int hostLen = getAuthorityHostLen(pCur, pBEnd - pCur);
+    if (hostLen < 0)
+    {
+        LS_INFO(getLogSession(), "Status 400: invalid request authority!");
+        m_iHostOff = 0;
+        m_iHostLen = 0;
+        return SC_400;
+    }
     if ((pCur + 4) < pBEnd)
     {
         char ch1;
@@ -1326,13 +1672,7 @@ int HttpReq::postProcessHost(const char *pCur, const char *pBEnd)
         if (strncmp((char *)pCur, "www.", 4) == 0)
             m_iLeadingWWW = 1;
     }
-    pstrfound = (char *)memchr(pCur, ':', (pBEnd - pCur));
-    if (pstrfound)
-        m_iHostLen = pstrfound - pCur;
-    else
-        m_iHostLen = pBEnd - pCur;
-    if (!m_iHostLen)
-        m_iHostOff = 0;
+    m_iHostLen = hostLen;
 
     return 0;
 }
@@ -1596,9 +1936,9 @@ int HttpReq::translate(const char *pURI, int uriLen,
 int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
 {
     assert(pURL);
-    if (*pURL != '/')
+    if (len <= 0 || *pURL != '/' || !isReqTargetValid(pURL, len))
     {
-        LS_DBG_L(getLogSession(), "URL is invalid - does not start with '/'.");
+        LS_DBG_L(getLogSession(), "Invalid internal redirect URL.");
         return SC_400;
     }
     char *pURI;
@@ -1624,6 +1964,12 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
                  len, pURL);
         return SC_400;    //invalid url format
     }
+    iURILen = normalizeDecodedReqPath(pURI, iURILen);
+    if (iURILen == LS_FAIL)
+    {
+        LS_DBG_L(getLogSession(), "Invalid decoded internal redirect URI.");
+        return SC_400;
+    }
     uSetURI(pURI, iURILen);
     if ((alloc) || (n - 1 - (pArgs - pURI) > 0))
         setQS(getURI() + (pArgs - pURI), n - 1 - (pArgs - pURI));
@@ -1635,33 +1981,33 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
 }
 
 
-int HttpReq::setRewriteURI(const char *pURL, int len, int no_escape)
+int HttpReq::setRewriteURI(const char *pURL, int len, int encoded)
 {
-    if (len < 0)
+    if (!pURL || len <= 0 || *pURL != '/')
         return LS_FAIL;
-    int totalLen;
-    if (!no_escape && len > MAX_URL_LEN / 3)
-        totalLen = MAX_URL_LEN;
-    else
-        totalLen = len + ((!no_escape) ? len * 2 : 0);
-    if (totalLen > MAX_URL_LEN)
-        totalLen = MAX_URL_LEN;
-    char *p = (char *)ls_xpool_alloc(m_pPool, totalLen + URL_INDEX_PAD);
-    char *pEnd = p + totalLen - 1;
-    uSetURI(p, totalLen);
-    if (!no_escape)
-        p = escape_uri(p, pEnd, pURL, len);
-    else
-    {
-        if (len > totalLen)
-            len = totalLen;
-        memcpy(p, pURL, len);
-        p += len;
-    }
-    *p = 0;
-    ls_str_setlen(&m_curUrl.key, p - getURI());
-    m_iScriptNameLen = getURILen();
+    if (len > MAX_URL_LEN)
+        len = MAX_URL_LEN;
+    char *pURI = (char *)ls_xpool_alloc(m_pPool, len + URL_INDEX_PAD);
+    if (!pURI)
+        return LS_FAIL;
+    memcpy(pURI, pURL, len);
+    pURI[len] = 0;
+    int uriLen = normalizeDecodedReqPath(pURI, len);
+    if (uriLen == LS_FAIL)
+        return LS_FAIL;
+    pURI[uriLen] = 0;
+    setNormalizedURI(pURI, uriLen, encoded);
     return 0;
+}
+
+
+//pURI must be a normalized pool buffer with URL_INDEX_PAD spare bytes.
+void HttpReq::setNormalizedURI(char *pURI, int uriLen, int encoded)
+{
+    uSetURI(pURI, uriLen);
+    //A [P,NE] target is already percent-encoded for the backend.
+    m_pEncodedURI = encoded ? pURI : NULL;
+    m_iScriptNameLen = getURILen();
 }
 
 
@@ -1765,13 +2111,20 @@ int HttpReq::internalRedirect(const char *pURL, int len, int alloc)
 
 
 int HttpReq::internalRedirectURI(const char *pURI, int len,
-                                 int resetPathInfo, int no_escape)
+                                 int resetPathInfo, int encoded)
 {
     assert(pURI);
     int ret = saveCurURL();
     if (ret)
         return ret;
-    setRewriteURI(pURI, len, no_escape);
+    ret = setRewriteURI(pURI, len, encoded);
+    if (ret)
+    {
+        --m_iRedirects;
+        m_curUrl.key = m_pUrls[m_iRedirects].key;
+        m_curUrl.val = m_pUrls[m_iRedirects].val;
+        return SC_400;
+    }
     if (resetPathInfo)
     {
         ls_str_setlen(&m_pathInfo, 0);
@@ -2119,25 +2472,111 @@ int HttpReq::setMimeBySuffix(const char *pSuffix)
 }
 
 
+static int normalizeInternalRedirectPath(char *pPath, int len)
+{
+    if (len <= 0 || *pPath != '/')
+        return LS_FAIL;
+
+    char *pSrc = pPath + 1;
+    char *pEnd = pPath + len;
+    char *pDest = pPath + 1;
+    bool trailingSlash = len > 1 && pEnd[-1] == '/';
+    while (pSrc < pEnd)
+    {
+        while (pSrc < pEnd && *pSrc == '/')
+            ++pSrc;
+        const char *pSegment = pSrc;
+        while (pSrc < pEnd && *pSrc != '/')
+        {
+            unsigned char ch = (unsigned char)*pSrc;
+            if (ch < 0x20 || ch == 0x7f || ch == '\\')
+                return LS_FAIL;
+            ++pSrc;
+        }
+        int segmentLen = pSrc - pSegment;
+        if (segmentLen == 0)
+            break;
+        if (segmentLen == 2 && pSegment[0] == '.' && pSegment[1] == '.')
+            return LS_FAIL;
+        if (segmentLen == 1 && pSegment[0] == '.')
+            continue;
+        if (pDest != pPath + 1)
+            *pDest++ = '/';
+        memmove(pDest, pSegment, segmentLen);
+        pDest += segmentLen;
+    }
+    if (trailingSlash && pDest != pPath + 1 && pDest[-1] != '/')
+        *pDest++ = '/';
+    *pDest = 0;
+    return pDest - pPath;
+}
+
+
 int HttpReq::locationToUrl(const char *pLocation, int len)
 {
-    char achURI[8192];
-    const HttpContext *pNewCtx;
-    pNewCtx = m_pVHost->matchLocation(pLocation, len);
+    if (!pLocation || !m_pVHost || len <= 0 || len > MAX_URL_LEN
+        || *pLocation != '/')
+        return LS_FAIL;
+
+    const char *pQuery = (const char *)memchr(pLocation, '?', len);
+    int pathLen = pQuery ? pQuery - pLocation : len;
+    int queryLen = len - pathLen;
+    char *pDecoded = (char *)ls_xpool_alloc(m_pPool, pathLen + 1);
+    if (!pDecoded)
+        return LS_FAIL;
+    int decodedLen = decodeReqPath(pLocation, pathLen, pDecoded);
+    if (decodedLen == LS_FAIL)
+        return LS_FAIL;
+    pDecoded[decodedLen] = 0;
+    decodedLen = normalizeInternalRedirectPath(pDecoded, decodedLen);
+    if (decodedLen == LS_FAIL)
+    {
+        LS_WARN(getLogSession(), "Rejected unsafe internal redirect location.");
+        return LS_FAIL;
+    }
+
+    const char *pMapped = pDecoded;
+    int mappedLen = decodedLen;
+    const HttpContext *pNewCtx = m_pVHost->matchLocation(pDecoded,
+                                                         decodedLen);
     if (pNewCtx)
     {
-        int suffixLen = len - pNewCtx->getLocationLen();
-        if (suffixLen < 0)
-            suffixLen = 0;
-        int n = lsnprintf(achURI, sizeof(achURI), "%s%.*s",
-                          pNewCtx->getURI(), suffixLen,
-                          pLocation + pNewCtx->getLocationLen());
-        pLocation = achURI;
-        len = n;
+        int locationLen = pNewCtx->getLocationLen();
+        int suffixLen = decodedLen - locationLen;
+        int contextURILen = pNewCtx->getURILen();
+        if (suffixLen < 0 || contextURILen > MAX_URL_LEN - suffixLen)
+            return LS_FAIL;
+        mappedLen = contextURILen + suffixLen;
+        char *pURI = (char *)ls_xpool_alloc(m_pPool, mappedLen + 1);
+        if (!pURI)
+            return LS_FAIL;
+        memcpy(pURI, pNewCtx->getURI(), contextURILen);
+        memcpy(pURI + contextURILen, pDecoded + locationLen, suffixLen);
+        pURI[mappedLen] = 0;
+        pMapped = pURI;
         LS_DBG_H(getLogSession(), "File [%s] has been mapped to URI: [%s],"
-                 " via context: [%s]", pLocation, achURI, pNewCtx->getURI());
+                 " via context: [%s]", pDecoded, pMapped,
+                 pNewCtx->getURI());
     }
-    setLocation(pLocation, len);
+
+    size_t escapedSize = (size_t)mappedLen * 3 + queryLen + 4;
+    char *pEscaped = (char *)ls_xpool_alloc(m_pPool, escapedSize);
+    if (!pEscaped)
+        return LS_FAIL;
+    char *pEscapedEnd = escape_uri(pEscaped, pEscaped + escapedSize - 1,
+                                   pMapped, mappedLen);
+    int escapedLen = pEscapedEnd - pEscaped;
+    if (escapedLen > MAX_URL_LEN - queryLen)
+        return LS_FAIL;
+    if (queryLen)
+    {
+        memcpy(pEscapedEnd, pQuery, queryLen);
+        pEscapedEnd += queryLen;
+        escapedLen += queryLen;
+    }
+    *pEscapedEnd = 0;
+    if (setLocation(pEscaped, escapedLen) != escapedLen)
+        return LS_FAIL;
     return 0;
 }
 
@@ -2145,27 +2584,36 @@ int HttpReq::locationToUrl(const char *pLocation, int len)
 int HttpReq::postRewriteProcess(const char *pURI, int len)
 {
     //if is rewriten to file path, reverse lookup context from file path
+    if (!pURI || len <= 0 || len > MAX_URL_LEN)
+        return LS_FAIL;
+    char *pNormalized = (char *)ls_xpool_alloc(m_pPool, len + URL_INDEX_PAD);
+    if (!pNormalized)
+        return LS_FAIL;
+    memcpy(pNormalized, pURI, len);
+    pNormalized[len] = 0;
+    len = normalizeDecodedReqPath(pNormalized, len);
+    if (len == LS_FAIL)
+        return LS_FAIL;
+    pNormalized[len] = 0;
+    pURI = pNormalized;
+
     const HttpContext *pNewCtx;
     pNewCtx = m_pVHost->matchLocation(pURI, len);
     if (pNewCtx)
     {
         // should skip context processing;
         m_iContextState &= ~PROCESS_CONTEXT;
+        if (pNewCtx != m_pContext)
+            m_iContextState &= ~CONTEXT_AUTH_CHECKED;
         m_pContext = pNewCtx;
         m_pHttpHandler = pNewCtx->getHandler();
         m_pMimeType = NULL;
-        // if new context is same as previous one skip authentication
-        if (pNewCtx != m_pContext)
-        {
-            m_iContextState &= ~CONTEXT_AUTH_CHECKED;
-            m_pContext = pNewCtx;
-        }
         m_iMatchedLen = len;
         memmove(HttpResourceManager::getGlobalBuf(), pURI, len + 1);
     }
     else
     {
-        setRewriteURI(pURI, len);
+        setNormalizedURI(pNormalized, len, 0);
         if (m_pContext && len > m_pContext->getURILen())
         {
             const HttpContext *pContext = m_pVHost->bestMatch(pURI, len);
@@ -2247,6 +2695,8 @@ int HttpReq::processContext()
         if (m_pContext->getMatchList())   //regular expression match
             processMatchList(m_pContext, pURI, iURILen);
     }
+    if (m_pContext != pOldCtx)
+        m_iContextState &= ~CONTEXT_AUTH_CHECKED;
     if (m_pHttpHandler->getType() == HandlerType::HT_PROXY)
         return -2;
     if (m_pHttpHandler->getType() == HandlerType::HT_MODULE
@@ -2254,8 +2704,6 @@ int HttpReq::processContext()
     {
       setScriptNameLen(m_pContext->getURILen());
     }
-    if (m_pContext != pOldCtx)
-        m_iContextState &= ~CONTEXT_AUTH_CHECKED;
     return 0;
 }
 
@@ -3314,23 +3762,63 @@ const char *HttpReq::encodeReqLine(int &len)
     const char *pURI = getURI();
     int uriLen = getURILen();
     int qsLen = getQueryStringLen();
-    int maxLen = uriLen * 3 + 16 + qsLen;
-    char *p = (char *)ls_xpool_alloc(m_pPool, maxLen + 10);
+    int methodLen = HttpMethod::getLen(m_method);
+    //"METHOD " + escaped path + "?" + escaped query
+    long long required = (long long)methodLen + 2
+                         + ((long long)uriLen + qsLen) * 3;
+    if (uriLen < 0 || qsLen < 0
+        || required > std::numeric_limits<int>::max() - 10)
+    {
+        len = LS_FAIL;
+        return NULL;
+    }
+    char *p = (char *)ls_xpool_alloc(m_pPool, (int)required + 10);
+    if (!p)
+    {
+        len = LS_FAIL;
+        return NULL;
+    }
     char *pStart = p;
-    memmove(p, HttpMethod::get(m_method), HttpMethod::getLen(m_method));
-    p += HttpMethod::getLen(m_method);
+    memmove(p, HttpMethod::get(m_method), methodLen);
+    p += methodLen;
     *p++ = ' ';
-    //p = escape_uri( p, pURI, uriLen );
-    memmove(p, pURI, uriLen);
-    p += uriLen;
+    p = escape_req_path(p, pURI, uriLen, pURI == m_pEncodedURI);
     if (qsLen > 0)
     {
         *p++ = '?';
-        memmove(p, getQueryString(), qsLen);
-        p += qsLen;
+        p = escape_req_query(p, getQueryString(), qsLen);
     }
     len = p - pStart;
     return pStart;
+}
+
+
+const char *HttpReq::encodeProxyReqLine(int &len)
+{
+    if (getRedirects() > 0)
+        return encodeReqLine(len);
+
+    const char *pReqLine = getOrgReqLine();
+    int prefixLen = HttpMethod::getLen(m_method) + 1;
+    const char *pTarget = pReqLine + prefixLen;
+    const char *pOriginTarget = getOrgReqURL();
+    if (pTarget == pOriginTarget)
+    {
+        len = 0;
+        return NULL;
+    }
+
+    int targetLen = getOrgReqURLLen();
+    char *pEncoded = (char *)ls_xpool_alloc(m_pPool, prefixLen + targetLen);
+    if (pEncoded == NULL)
+    {
+        len = LS_FAIL;
+        return NULL;
+    }
+    memmove(pEncoded, pReqLine, prefixLen);
+    memmove(pEncoded + prefixLen, pOriginTarget, targetLen);
+    len = prefixLen + targetLen;
+    return pEncoded;
 }
 
 
@@ -4060,6 +4548,44 @@ int HttpReq::dropReqHeader(int index)
 }
 
 
+void HttpReq::dropUnknownReqHeader(const char *pName, int nameLen)
+{
+    if (m_unknHeaders.size() == 0)
+        return;
+
+    key_value_pair *pRead = m_unknHeaders.begin();
+    key_value_pair *pWrite = pRead;
+    key_value_pair *pEnd = m_unknHeaders.end();
+    int oldCfHeader = m_iCfRealIpHeader;
+    m_iCfRealIpHeader = 0;
+
+    while (pRead < pEnd)
+    {
+        bool drop = pRead->keyLen == nameLen
+                    && strncasecmp(m_headerBuf.getp(pRead->keyOff),
+                                   pName, nameLen) == 0;
+        if (drop)
+        {
+            if (m_pUpkdHeaders)
+                m_pUpkdHeaders->dropHeader(HttpHeader::H_UNKNOWN,
+                                           pRead->valOff);
+            eraseHeader(pRead);
+        }
+        else
+        {
+            if (pWrite != pRead)
+                *pWrite = *pRead;
+            if (oldCfHeader == pRead - m_unknHeaders.begin() + 1)
+                m_iCfRealIpHeader = pWrite - m_unknHeaders.begin() + 1;
+            ++pWrite;
+        }
+        ++pRead;
+    }
+    while (m_unknHeaders.end() > pWrite)
+        m_unknHeaders.pop();
+}
+
+
 int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
 {
     if (pOp->getOperator() == LSI_HEADER_UNSET)
@@ -4068,6 +4594,8 @@ int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
         {
             dropReqHeader(pOp->getIndex());
         }
+        else if (pOp->getIndex() == HttpHeader::H_HEADER_END)
+            dropUnknownReqHeader(pOp->getName(), pOp->getNameLen());
         return 0;
     }
     const char *pValue = pOp->getValue();
@@ -4087,6 +4615,8 @@ int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
             updateReqHeader(pOp->getIndex(), pOp->getValue(), pOp->getValueLen());
             break;
         }
+        //not an indexed header, remove the existing one before adding it back
+        dropUnknownReqHeader(pOp->getName(), pOp->getNameLen());
         //fall through
     case LSI_HEADER_ADD:    //add a new line
     case LSI_HEADER_APPEND: //Add with a comma to seperate
@@ -4225,11 +4755,22 @@ void HttpReq::appendReqHeader( const char *pName, int iNameLen,
     if (m_headerBuf.available() < iValLen + iNameLen + 4)
         m_headerBuf.grow(iValLen + iNameLen + 4 - m_headerBuf.available());
 
+    int nameOff = m_headerBuf.size();
     m_headerBuf.append(pName, iNameLen);
     m_headerBuf.append(": ", 2);
+    int valOff = m_headerBuf.size();
     m_headerBuf.append(pValue, iValLen);
     m_headerBuf.append("\r\n\r\n", 4);
     m_iReqHeaderBufFinished = m_iHttpHeaderEnd = m_headerBuf.size();
+
+    if (HttpHeader::getIndex(pName, iNameLen) == HttpHeader::H_HEADER_END)
+    {
+        key_value_pair *pIdx = newUnknownHeader();
+        pIdx->keyOff = nameOff;
+        pIdx->keyLen = iNameLen;
+        pIdx->valOff = valOff;
+        pIdx->valLen = iValLen;
+    }
 }
 
 

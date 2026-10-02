@@ -240,4 +240,25 @@ TEST(GPathTest_test)
 
 }
 
+
+TEST(GPathTest_cleanTrailingDotSegments)
+{
+    char buf[256];
+
+    strcpy(buf, "/home/user/.");
+    CHECK_EQUAL(11, GPath::clean(buf, strlen(buf)));
+    CHECK_EQUAL("/home/user/", buf);
+
+    strcpy(buf, "/home/user/..");
+    CHECK_EQUAL(6, GPath::clean(buf, strlen(buf)));
+    CHECK_EQUAL("/home/", buf);
+
+    strcpy(buf, "/home/user/dir/../..");
+    CHECK_EQUAL(6, GPath::clean(buf, strlen(buf)));
+    CHECK_EQUAL("/home/", buf);
+
+    strcpy(buf, "/..");
+    CHECK_EQUAL(-1, GPath::clean(buf, strlen(buf)));
+}
+
 #endif

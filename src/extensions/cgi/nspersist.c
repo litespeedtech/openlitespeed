@@ -38,6 +38,7 @@
 #include "nsopts.h"
 #include "nsutils.h"
 #include "lscgid.h"
+#include "rootcheck.h"
 #include "use_bwrap.h"
 #include "nsnosandbox.h"
 #include "nspersist.h"
@@ -366,10 +367,32 @@ static int enter_root_fd(int root_fd, const char *desc)
 
 int nspersist_setvhost(char *vhenv)
 {
+    const unsigned int max_vhost_len = PERSIST_DIR_SIZE -
+        PERSIST_PREFIX_LEN - 1 - 10 - 1 - (sizeof(s_persist_num) - 1) - 1;
+
     if (!vhenv)
     {
         vhenv = "";
         DEBUG_MESSAGE("Namespace requires a virtual host - use %s\n", vhenv);
+    }
+    if (*vhenv)
+    {
+        const unsigned char *p = (const unsigned char *)vhenv;
+        int all_digits = 1;
+
+        if (strlen(vhenv) > max_vhost_len || vhenv[0] == '.' ||
+            strchr(vhenv, '/') || !strcmp(vhenv, "root") ||
+            !strcmp(vhenv, PERSIST_FILE))
+            goto invalid_vhost;
+        for (; *p; ++p)
+        {
+            if (*p < '0' || *p > '9')
+                all_digits = 0;
+            if (*p < 0x20 || *p == 0x7f)
+                goto invalid_vhost;
+        }
+        if (all_digits)
+            goto invalid_vhost;
     }
     if (!s_persisted_VH || strcmp(s_persisted_VH, vhenv))
     {
@@ -386,6 +409,11 @@ int nspersist_setvhost(char *vhenv)
     }
     DEBUG_MESSAGE("VH specified as %s\n", s_persisted_VH);
     return 0;
+
+invalid_vhost:
+    errno = EINVAL;
+    ls_stderr("Namespace invalid virtual host name: %s\n", vhenv);
+    return DEFAULT_ERR_RC;
 }
 
 
@@ -1546,10 +1574,11 @@ static int report_pid_to_parent(lscgid_t *pCGI, uint32_t pid)
     DEBUG_MESSAGE("report_pid_to_parent: %d\n", pid);
     if (**pCGI->m_argv == '&')
     {
+        static char shell_path[] = "/bin/sh";
         static const char sHeader[] = "Status: 200\r\n\r\n";
         writeall(STDOUT_FILENO, sHeader, sizeof(sHeader) - 1);
-        pCGI->m_pCGIDir = "/bin/sh";
-        pCGI->m_argv[0] = "/bin/sh";
+        pCGI->m_pCGIDir = shell_path;
+        pCGI->m_argv[0] = shell_path;
     }
     else
     {
@@ -1671,14 +1700,23 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
         DEBUG_MESSAGE("initgroups, name: %s\n", pw->pw_name);
         rv = initgroups(pw->pw_name, gid);
         if (rv == -1)
-            DEBUG_MESSAGE("Can't initgroups(): %s\n", strerror(errno));
+        {
+            int err = errno;
+            ls_stderr("Namespace error lscgid: initgroups(): %s\n",
+                      strerror(err));
+            return nsopts_rc_from_errno(err);
+        }
     }
     else
     {
         rv = setgroups(1, &gid);
         if (rv == -1)
-            DEBUG_MESSAGE("Namespace error lscgid: setgroups(): %s\n", 
-                          strerror(errno));
+        {
+            int err = errno;
+            ls_stderr("Namespace error lscgid: setgroups(): %s\n",
+                      strerror(err));
+            return nsopts_rc_from_errno(err);
+        }
     }
     DEBUG_MESSAGE("chroot: %s\n", pChroot);
     if (pChroot)
@@ -1707,6 +1745,11 @@ int persist_change_stderr_log(lscgid_t *pCGI)
 {
     if (!pCGI->m_stderrPath)
         return 0;
+    if (geteuid() == 0)
+    {
+        DEBUG_MESSAGE("Skip request stderr log while running as root\n");
+        return 0;
+    }
 
     const char *path = pCGI->m_stderrPath;
     if (pCGI->m_pChroot)
@@ -1920,7 +1963,10 @@ static int persist_use_child(lscgid_t *pCGI)
     DEBUG_MESSAGE("persist_use_child, pid: %d\n", getpid());
     if (setgroups(0, NULL))
     {
-        DEBUG_MESSAGE("setgroups failed first time: %s\n", strerror(errno));
+        int err = errno;
+        ls_stderr("Namespace error clearing supplementary groups before "
+                  "setns: %s\n", strerror(err));
+        return nsopts_rc_from_errno(err);
     }
     else
     {
@@ -1999,7 +2045,10 @@ static int persist_use_child(lscgid_t *pCGI)
         close(host_root_fd);
     if (!rc && setgroups(0, NULL))
     {
-        DEBUG_MESSAGE("setgroups failed second time: %s\n", strerror(errno));
+        int err = errno;
+        ls_stderr("Namespace error clearing supplementary groups after "
+                  "setns: %s\n", strerror(err));
+        rc = nsopts_rc_from_errno(err);
     }
     else
     {
@@ -2046,8 +2095,10 @@ static int persist_use_child(lscgid_t *pCGI)
     }
     if (!rc)
     {
-        report_pid_to_parent(pCGI, getpid());
-        if (pCGI->m_data.m_umask)
+        rc = check_root_exec_path(pCGI);
+        if (!rc)
+            report_pid_to_parent(pCGI, getpid());
+        if (!rc && pCGI->m_data.m_umask)
             umask(pCGI->m_data.m_umask);
     }
     if (rc == 0)
@@ -2095,7 +2146,11 @@ static int unmount_vhost(int report, int uid, char *vhost)
     int rc = 0;
     DEBUG_MESSAGE("unmount_vhost, uid: %d, num: %s, vhost: %s\n", uid, s_persist_num, vhost);
     if (vhost && vhost != s_persisted_VH)
-        nspersist_setvhost(vhost);
+    {
+        rc = nspersist_setvhost(vhost);
+        if (rc)
+            return rc;
+    }
     if (open_persist_vh_file(report, uid, NSPERSIST_LOCK_WRITE_NB))
     {
         DEBUG_MESSAGE("Can't lock\n");
@@ -2112,10 +2167,13 @@ static int unmount_vhost(int report, int uid, char *vhost)
 
 int unpersist_uid(int report, uid_t uid, char *vhost)
 {
+    int rc;
     s_persist_uid = uid;
     s_persist_num[0] = 0;
-    nspersist_setvhost(vhost);
-    int rc = get_persist_num(1, uid, 1, 0);
+    rc = nspersist_setvhost(vhost);
+    if (rc)
+        return rc;
+    rc = get_persist_num(1, uid, 1, 0);
     DEBUG_MESSAGE("unpersist_uid: %u, active vhost: %s, active persist: %s\n", uid, s_persisted_VH, s_persist_num);
     char persist_dir[PERSIST_DIR_SIZE];
     persist_persist_file_dir(persist_dir, sizeof(persist_dir));

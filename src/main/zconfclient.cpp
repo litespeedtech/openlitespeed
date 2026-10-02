@@ -66,6 +66,9 @@ int ZConfClient::initFetch(const char *pAuth, int iAuthLen)
 {
     m_iReqType = ZCUNKNOWN;
     m_fetch.reset();
+    // ZConf supports private IP endpoints and has no peer-CA configuration.
+    // Preserve compatibility until it can configure a trusted CA and name.
+    m_fetch.setVerifyCert(0);
     m_fetch.setCallBack(processFetch, this);
     return m_fetch.setExtraHeaders(pAuth, iAuthLen);
 }

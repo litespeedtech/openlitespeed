@@ -244,6 +244,10 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
             break;
         //fall through
     case HttpRespHeaders::H_LITESPEED_LOCATION:
+        //proxy Location never falls through; drop the internal redirect
+        //control from proxy backends instead of forwarding it to the client.
+        if (status & HEC_RESP_PROXY)
+            return 0;
         if (valLen <= 0 || *pValue != '/')
         {
             //set status code to 307
@@ -256,10 +260,8 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
                 pReq->setStatusCode(SC_200);
             if (index == HttpRespHeaders::H_LITESPEED_LOCATION)
             {
-                char ch = *(pValue + valLen);
-                *((char *)(pValue + valLen)) = 0;
-                pReq->locationToUrl(pValue, valLen);
-                *((char *)(pValue + valLen)) = ch;
+                if (pReq->locationToUrl(pValue, valLen) == LS_FAIL)
+                    return LS_FAIL;
             }
             else
                 pReq->setLocation(pValue, valLen);
@@ -269,6 +271,8 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
         }
         break;
     case HttpRespHeaders::H_CGI_STATUS:
+        if (status & HEC_RESP_PROXY)
+            return 0;
         tmpIndex = (valLen >= 3)
                    ? HttpStatusCode::getInstance().codeToIndex(pValue)
                    : -1;
@@ -329,11 +333,20 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
             {
                 if (lContentLen > HttpServerConfig::getInstance().getMaxDynRespLen())
                 {
-                    pReq->setStatusCode(SC_413);
-                    int len = pExtConn->getHttpSession()->createOverBodyLimitErrorPage();
-                    pResp->setContentLen(len);
-                    pExtConn->getHttpSession()->endResponse(0);
-                    return LS_FAIL;
+                    LS_WARN(pExtConn->getHttpSession()->getLogSession(),
+                            "Response content-length: %lld is over the limit "
+                            "%lld, abort the request.", (long long)lContentLen,
+                            (long long)HttpServerConfig::getInstance()
+                                                        .getMaxDynRespLen());
+                    //NOTE: do not end the response from here, the response
+                    //header is still being parsed. Ending it would recycle
+                    //this connector and the ext connection while the parser
+                    //and the ext connection read loop are still using them.
+                    //Just flag the error, the request is finished by the
+                    //event loop after the read loop unwinds.
+                    pExtConn->abortReq();
+                    pExtConn->errResponse(SC_413, NULL);
+                    return RESP_HEADER_ERR_SET;
                 }
                 else
                 {
@@ -355,6 +368,8 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
         if (11 == nameLen && 0 == strncasecmp(pName, "Lsrecaptcha", 11)
             && 1 == valLen && '1' == *pValue)
         {
+            if (status & HEC_RESP_PROXY)
+                return 0;
             pExtConn->getHttpSession()->checkSuccessfulRecaptcha();
             return 0;
         }
@@ -431,18 +446,20 @@ int HttpCgiTool::parseRespHeader(HttpExtConnector *pExtConn,
                     status |= HEC_RESP_AUTHORIZED;
                 if (index == SC_444)
                 {
+                    if (status & HEC_RESP_PROXY)
+                        return LS_FAIL;
                     int optionLen = pLineEnd - pValue;
                     pExtConn->getHttpSession()->process444(
                         (optionLen > 4) ? pValue + 4 : "",
                         (optionLen > 4) ? optionLen - 4 : 0);
                     return -1;
                 }
-
             }
             continue;
         }
-        if (processHeaderLine(pExtConn, pValue,  pLineEnd) == -1)
-            return LS_FAIL;
+        int ret = processHeaderLine(pExtConn, pValue,  pLineEnd);
+        if (ret < 0)
+            return ret;
     }
     return pCur - pBuf;
 }

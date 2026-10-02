@@ -4,7 +4,8 @@ unmount_ns_SOURCES = unmount_ns.c \
 		nsopts.c \
 		nspersist.c \
 		nsutils.c \
-		ns.c
+		ns.c \
+		../../src/extensions/cgi/rootcheck.c
 
 
 AM_LDFLAGS = $(OPENSSL_LDFLAGS) -L/usr/lib -L/usr/local/lib -L/usr/lib64  

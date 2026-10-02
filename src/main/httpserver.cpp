@@ -1457,7 +1457,7 @@ void HttpServerImpl::checkOLSUpdate()
     char sUrl[256];
     char osstr[64] = {0};
     char plat[64] = {0};
-    const char *httpUrl = "http://openlitespeed.org/";
+    const char *httpUrl = "https://openlitespeed.org/";
     addrResponder.setHttpUrl(httpUrl, strlen(httpUrl));
     addrResponder2.setHttpUrl(httpUrl, strlen(httpUrl));
     snprintf(sUrl, sizeof(sUrl), "%s%s%s%s%s%s%s%s%s", httpUrl,
@@ -1486,7 +1486,7 @@ void HttpServerImpl::checkOLSUpdate()
     m_pAutoUpdFetch[1]->setTimeout(15);  //Set Req timeout as 30 seconds
     m_pAutoUpdFetch[1]->setCallBack(autoUpdCheckCb, this);
     int curVer = readVersionStr(PACKAGE_VERSION);
-    snprintf(sUrl, 255, "http://openlitespeed.org/packages/relbr%d.%d?",
+    snprintf(sUrl, 255, "%spackages/relbr%d.%d?", httpUrl,
              curVer / 1000000, (curVer / 10000) % 100);
     m_pAutoUpdFetch[1]->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
                               addrResponder2);
@@ -4626,6 +4626,12 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
     pShmDir = pNode->getChildValue("quicShmDir");
 
     lsquic_engine_init_settings(&settings, LSENG_SERVER);
+
+    int connTimeout = HttpServerConfig::getInstance().getConnTimeout() + 30;
+    if (connTimeout > 600)
+        settings.es_noprogress_timeout = 0;
+    else if (connTimeout > (int)settings.es_noprogress_timeout)
+        settings.es_noprogress_timeout = connTimeout;
 
     settings.es_versions = (1 << LSQVER_I002) | (1 << LSQVER_I001)
                             | (1 << LSQVER_ID29);

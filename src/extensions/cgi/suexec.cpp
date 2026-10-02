@@ -34,6 +34,7 @@
 #include <util/pcutil.h>
 #include <util/rlimits.h>
 #include <util/stringtool.h>
+#include <openssl/rand.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -184,12 +185,7 @@ int SUExec::spawnChild(const char *pAppCmd, int fdIn, int fdOut,
 
 void generateSecret(char *pBuf)
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    srand((tv.tv_sec % 0x1000 + tv.tv_usec) ^ rand());
-    for (int i = 0; i < 16; ++i)
-        pBuf[i] = 33 + (int)(94.0 * rand() / (RAND_MAX + 1.0));
-    pBuf[16] = 0;
+    RAND_bytes((uint8_t*)pBuf, 16);
 }
 
 

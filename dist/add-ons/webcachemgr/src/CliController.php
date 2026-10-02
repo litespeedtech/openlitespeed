@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author Michael Alegre
- * @copyright (c) 2018-2023 LiteSpeed Technologies, Inc.
+ * @copyright (c) 2018-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp;
@@ -329,7 +329,14 @@ class CliController
                     );
                 }
             }
-            elseif ( !preg_match('#^[A-Za-z0-9_\-]+$#', $this->vhCacheRootParam) ) {
+            /**
+             * Anchored with '\z', not '$', which also matches immediately
+             * before a trailing newline. trim() above already strips one
+             * here, so this is defense in depth matching the same anchor in
+             * ControlPanel::setVHCacheRoot(), which is the validator that
+             * actually guards the "CacheRoot $vhCacheRoot" write.
+             */
+            elseif ( !preg_match('#^[A-Za-z0-9_\-]+\z#', $this->vhCacheRootParam) ) {
                 throw new LSCMException(
                     'Invalid Command, non-absolute virtual host cache root must '
                         . 'contain only [A-Za-z0-9_-] characters.'

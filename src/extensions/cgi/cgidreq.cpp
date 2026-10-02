@@ -16,9 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "cgidreq.h"
+#include "blake2b.h"
 
 #include <util/rlimits.h>
-#include <util/stringtool.h>
 
 #include <openssl/rand.h>
 #include <stdio.h>
@@ -202,16 +202,19 @@ int CgidReq::buildReqHeader(int uid, int gid, int priority, int umaskVal,
 
 int CgidReq::finalize(int req_id, const char *pSecret, int type)
 {
+    unsigned char mac[LSCGID_MAC_LEN];
     lscgid_req *pHeader = getCgidReq();
-    pHeader->m_version = LSCGID_VERSION_1;
+    pHeader->m_version = LSCGID_VERSION_2;
     pHeader->m_type = type;
     pHeader->m_reqid = req_id;
     pHeader->m_szData = size() - sizeof(lscgid_req);
 
-    RAND_pseudo_bytes(pHeader->m_nonce, 16);
-    memmove(pHeader->m_md5, pSecret, 16);
-    StringTool::getMd5((const char *)pHeader, sizeof(lscgid_req),
-                       pHeader->m_md5);
+    if (RAND_bytes(pHeader->m_nonce, sizeof(pHeader->m_nonce)) != 1)
+        return LS_FAIL;
+    memset(pHeader->m_md5, 0, sizeof(pHeader->m_md5));
+    if (blake2b(mac, sizeof(mac), pSecret, LSCGID_SECRET_LEN,
+                m_buf.begin(), m_buf.size()) != 0)
+        return LS_FAIL;
+    memcpy(pHeader->m_md5, mac, sizeof(pHeader->m_md5));
     return 0;
 }
-
