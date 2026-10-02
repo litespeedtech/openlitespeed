@@ -3851,6 +3851,20 @@ void HttpServerImpl::verifyStatDir(const char *path)
                 if (rootuser)
                 {
                     chown(path, pw->pw_uid, pw->pw_gid);
+                    DIR *dir = opendir(path);
+                    if (dir)
+                    {
+                        struct dirent *entry;
+                        while ((entry = readdir(dir)) != NULL)
+                        {
+                            if (strcmp(entry->d_name, ".") != 0
+                                && strcmp(entry->d_name, "..") != 0)
+                                fchownat(dirfd(dir), entry->d_name,
+                                         pw->pw_uid, pw->pw_gid,
+                                         AT_SYMLINK_NOFOLLOW);
+                        }
+                        closedir(dir);
+                    }
                     error = 0;
                 }
                 else
