@@ -196,7 +196,16 @@ static int          s_run = 1;
 static char         s_sDataBuf[16384];
 static int          s_fdControl = -1;
 static int          s_ns_enabled = 0;
+static char        *s_default_stderr_path = NULL;
+static int          s_default_stderr_fd = -1;
+static dev_t        s_default_stderr_dev = 0;
+static ino_t        s_default_stderr_ino = 0;
+static time_t       s_default_stderr_next_check = 0;
 
+static int use_cached_stderr_log(const char *path);
+static void check_default_stderr_log(time_t now);
+
+#define DEFAULT_STDERR_STAT_INTERVAL     10
 #define NS_WATCHER_RESTART_DELAY_INITIAL 5
 #define NS_WATCHER_RESTART_DELAY_MAX     300
 #define NS_WATCHER_RESTART_STABLE        60
@@ -401,8 +410,14 @@ int apply_rlimits_uid_chroot_stderr(lscgid_t *cgid)
             return 500;
     }
 
-    if (cgid->m_stderrPath && geteuid() != 0)
-        changeStderrLog(cgid);
+    if (cgid->m_stderrPath)
+    {
+        int cached = use_cached_stderr_log(cgid->m_stderrPath);
+        if (cached < 0)
+            return 500;
+        if (!cached && geteuid() != 0 && changeStderrLog(cgid) == -1)
+            return 500;
+    }
 
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
     if (req->m_data.rlim_cur)
@@ -1186,6 +1201,190 @@ static void schedule_socket_watcher_after_reap(int status)
 }
 
 
+static void close_default_stderr_log()
+{
+    if (s_default_stderr_fd != -1)
+    {
+        close(s_default_stderr_fd);
+        s_default_stderr_fd = -1;
+    }
+    free(s_default_stderr_path);
+    s_default_stderr_path = NULL;
+    s_default_stderr_dev = 0;
+    s_default_stderr_ino = 0;
+    s_default_stderr_next_check = 0;
+}
+
+
+static int open_default_stderr_log(struct stat *opened_st)
+{
+    struct stat st;
+    int fd;
+    int flags;
+
+    fd = open(s_default_stderr_path, O_WRONLY | O_APPEND);
+    if (fd == -1)
+    {
+        ls_stderr("lscgid: failed to reopen default stderr log %s: %s\n",
+                  s_default_stderr_path, strerror(errno));
+        return -1;
+    }
+    if (fstat(fd, &st) == -1)
+    {
+        ls_stderr("lscgid: failed to inspect default stderr log %s: %s\n",
+                  s_default_stderr_path, strerror(errno));
+        close(fd);
+        return -1;
+    }
+    if (!S_ISREG(st.st_mode))
+    {
+        ls_stderr("lscgid: default stderr log is not a regular file: %s\n",
+                  s_default_stderr_path);
+        close(fd);
+        return -1;
+    }
+
+    if (fd <= STDERR_FILENO)
+    {
+        int newfd = fcntl(fd, F_DUPFD, STDERR_FILENO + 1);
+        if (newfd == -1)
+        {
+            ls_stderr("lscgid: failed to move default stderr log fd: %s\n",
+                      strerror(errno));
+            close(fd);
+            return -1;
+        }
+        close(fd);
+        fd = newfd;
+    }
+
+    flags = fcntl(fd, F_GETFD);
+    if (flags == -1 || fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1)
+    {
+        ls_stderr("lscgid: failed to set close-on-exec on default stderr "
+                  "log: %s\n", strerror(errno));
+        close(fd);
+        return -1;
+    }
+
+    *opened_st = st;
+    return fd;
+}
+
+
+static void init_default_stderr_log(const char *path, int fd)
+{
+    struct stat st;
+    int flags;
+
+    if (!path || !*path || fd <= STDERR_FILENO)
+    {
+        if (path && *path)
+            ls_stderr("lscgid: no inherited descriptor for default stderr "
+                      "log %s\n", path);
+        if (fd > STDERR_FILENO)
+            close(fd);
+        return;
+    }
+
+    s_default_stderr_path = strdup(path);
+    if (!s_default_stderr_path)
+    {
+        ls_stderr("lscgid: failed to save default stderr log path\n");
+        close(fd);
+        return;
+    }
+    if (fstat(fd, &st) == -1)
+    {
+        ls_stderr("lscgid: failed to inspect inherited default stderr log "
+                  "%s: %s\n", path, strerror(errno));
+        goto fail;
+    }
+    if (!S_ISREG(st.st_mode))
+    {
+        ls_stderr("lscgid: inherited default stderr log is not a regular "
+                  "file: %s\n", path);
+        goto fail;
+    }
+    flags = fcntl(fd, F_GETFD);
+    if (flags == -1 || fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1)
+    {
+        ls_stderr("lscgid: failed to set close-on-exec on inherited default "
+                  "stderr log: %s\n", strerror(errno));
+        goto fail;
+    }
+
+    s_default_stderr_fd = fd;
+    s_default_stderr_dev = st.st_dev;
+    s_default_stderr_ino = st.st_ino;
+    s_default_stderr_next_check = time(NULL) +
+                                  DEFAULT_STDERR_STAT_INTERVAL;
+    return;
+
+fail:
+    close(fd);
+    close_default_stderr_log();
+}
+
+
+static int use_cached_stderr_log(const char *path)
+{
+    if (!path || !s_default_stderr_path ||
+        strcmp(path, s_default_stderr_path) != 0)
+        return 0;
+    if (s_default_stderr_fd <= STDERR_FILENO)
+    {
+        errno = EBADF;
+        ls_stderr("lscgid (%d): invalid cached stderr log fd for %s\n",
+                  getpid(), s_default_stderr_path);
+        return -1;
+    }
+    if (dup2(s_default_stderr_fd, STDERR_FILENO) == -1)
+    {
+        ls_stderr("lscgid (%d): failed to use cached stderr log %s: %s\n",
+                  getpid(), s_default_stderr_path, strerror(errno));
+        return -1;
+    }
+    return 1;
+}
+
+
+static void check_default_stderr_log(time_t now)
+{
+    struct stat path_st;
+    struct stat opened_st;
+    int newfd;
+    int oldfd;
+
+    if (!s_default_stderr_path || s_default_stderr_fd == -1 ||
+        now < s_default_stderr_next_check)
+        return;
+
+    s_default_stderr_next_check = now + DEFAULT_STDERR_STAT_INTERVAL;
+    if (stat(s_default_stderr_path, &path_st) == -1)
+    {
+        ls_stderr("lscgid: failed to stat default stderr log %s: %s\n",
+                  s_default_stderr_path, strerror(errno));
+        return;
+    }
+    if (path_st.st_dev == s_default_stderr_dev &&
+        path_st.st_ino == s_default_stderr_ino)
+        return;
+
+    newfd = open_default_stderr_log(&opened_st);
+    if (newfd == -1)
+        return;
+
+    oldfd = s_default_stderr_fd;
+    s_default_stderr_fd = newfd;
+    s_default_stderr_dev = opened_st.st_dev;
+    s_default_stderr_ino = opened_st.st_ino;
+    close(oldfd);
+    ls_stderr("lscgid: reopened rotated default stderr log %s\n",
+              s_default_stderr_path);
+}
+
+
 static int run(int fdServerSock)
 {
     int ret;
@@ -1195,6 +1394,8 @@ static int run(int fdServerSock)
     while (s_run)
     {
         ret = poll(&pfd, 1, 1000);
+        time_t now = time(NULL);
+        check_default_stderr_log(now);
         if (ret == 1)
         {
             int fd = accept(fdServerSock, NULL, NULL);
@@ -1210,7 +1411,7 @@ static int run(int fdServerSock)
         }
         if (s_got_sigchild)
             processSigchild();
-        if (s_ns_watcher_next_restart && time(NULL) >= s_ns_watcher_next_restart)
+        if (s_ns_watcher_next_restart && now >= s_ns_watcher_next_restart)
             start_socket_watcher();
     }
     return 0;
@@ -1309,7 +1510,8 @@ sighandler_t my_signal(int sig, sighandler_t f)
 }
 
 
-int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
+int lscgid_main(int fd, char *argv0, const char *secret, char *pSock,
+                const char *stderrLogPath, int stderrLogFd)
 {
     int ret;
     char *sEnv = NULL;
@@ -1325,6 +1527,10 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
     rootcheck_set_error_callback(set_cgi_error);
 
     memcpy(s_pSecret, secret, sizeof(s_pSecret));
+    init_default_stderr_log(stderrLogPath, stderrLogFd);
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    persist_set_cached_stderr_log(use_cached_stderr_log);
+#endif
 
 #ifdef HAS_CLOUD_LINUX
 
@@ -1376,5 +1582,6 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
         close(STDIN_FILENO);
         unlink(pSock);
     }
+    close_default_stderr_log();
     return ret;
 }

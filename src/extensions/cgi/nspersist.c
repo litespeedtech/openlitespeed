@@ -69,6 +69,13 @@ extern int s_not_lscgid;
 static int is_persisted_fn(int uid, int must_persist, int *persisted);
 static int open_persist_vh_file(int report, uid_t uid, int lock_type);
 static char *persist_vh_file_name(uid_t uid, char *filename, int filename_size);
+static int (*s_cached_stderr_log)(const char *path) = NULL;
+
+
+void persist_set_cached_stderr_log(int (*handler)(const char *path))
+{
+    s_cached_stderr_log = handler;
+}
 
 static int lock_file(uid_t uid, int fd, char *desc, int report, int lock_type, int *locked_write)
 {
@@ -1743,8 +1750,14 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
 
 int persist_change_stderr_log(lscgid_t *pCGI)
 {
+    int cached;
+
     if (!pCGI->m_stderrPath)
         return 0;
+    cached = s_cached_stderr_log
+             ? s_cached_stderr_log(pCGI->m_stderrPath) : 0;
+    if (cached)
+        return cached < 0 ? -1 : 0;
     if (geteuid() == 0)
     {
         DEBUG_MESSAGE("Skip request stderr log while running as root\n");

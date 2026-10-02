@@ -230,6 +230,10 @@ char *persist_namespace_dir_vh(uid_t uid, char *dirname, int dirname_len);
 **/
 int persist_change_stderr_log(lscgid_t *pCGI);
 
+/** Configure the optional daemon-owned stderr cache used by namespace
+ * children.  Namespace maintenance tools leave this callback unset. */
+void persist_set_cached_stderr_log(int (*handler)(const char *path));
+
 /**
  * @fn persist_report_pid
  * @brief Gets the final pid back to the caller if it wants it.

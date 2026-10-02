@@ -31,6 +31,7 @@
 #include <main/configctx.h>
 #include <main/mainserverconfig.h>
 #include <util/xmlnode.h>
+#include <log4cxx/appender.h>
 #include <log4cxx/logger.h>
 #include <extensions/localworker.h>
 #include <extensions/registry/extappregistry.h>
@@ -151,14 +152,33 @@ int CgidWorker::start(const char *pServerRoot, const char *pChroot,
 }
 
 
-static void CloseUnusedFd(int fd)
+static void CloseUnusedFd(int fd, int stderrLogFd)
 {
     for (int i = 3; i < 1024; ++i)
     {
-        if (i != fd)
-
+        if (i != fd && i != stderrLogFd)
             close(i);
     }
+}
+
+
+static int dupStdErrLogFd()
+{
+    LOG4CXX_NS::Appender *pAppender =
+        StdErrLogger::getInstance().getAppender();
+    if (!pAppender || pAppender->getfd() <= STDERR_FILENO)
+        return -1;
+
+    int fd = fcntl(pAppender->getfd(), F_DUPFD, STDERR_FILENO + 1);
+    if (fd == -1)
+        return -1;
+    int flags = fcntl(fd, F_GETFD);
+    if (flags == -1 || fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1)
+    {
+        close(fd);
+        return -1;
+    }
+    return fd;
 }
 
 
@@ -177,11 +197,15 @@ int CgidWorker::spawnCgid(int fd, char *pData, const char *secret)
     if (pid == 0)
     {
         char lve_env[16];
+        const char *pStdErrLog =
+            StdErrLogger::getInstance().getLogFileName();
+        int stderrLogFd = dupStdErrLogFd();
         StdErrLogger::getInstance().movePipeFdToStdErr();
-        CloseUnusedFd(fd);
+        CloseUnusedFd(fd, stderrLogFd);
         snprintf(lve_env, sizeof(lve_env) -1, "LVE_ENABLE=%d", getLVE());
         putenv(lve_env);
-        int ret = lscgid_main(fd, argv0, secret, pData);
+        int ret = lscgid_main(fd, argv0, secret, pData,
+                              pStdErrLog, stderrLogFd);
         exit(ret);
     }
     else if (pid > 0)
@@ -412,4 +436,3 @@ void CgidWorker::closeFdCgid()
 {
     close(m_fdCgid);
 }
-
