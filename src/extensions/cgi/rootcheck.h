@@ -33,6 +33,7 @@ int rootcheck_env_is_dangerous(const char *env);
 int check_root_executable(char *path);
 int check_root_exec_path(lscgid_t *cgi);
 int check_root_protected_file(char *path);
+int check_root_copy_source(char *path);
 int check_root_protected_directory(char *path);
 
 #ifdef __cplusplus

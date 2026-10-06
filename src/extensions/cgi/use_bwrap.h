@@ -26,6 +26,10 @@ extern "C"
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/types.h>
+
 #define BWRAP_ALLOCATE_EXTRA_DEFAULT    100
 extern int s_bwrap_extra_bytes;
 #define BWRAP_ALLOCATE_EXTRA s_bwrap_extra_bytes
@@ -38,6 +42,35 @@ extern int s_bwrap_extra_bytes;
 #define BWRAP_VAR_HOMEDIR   "$HOMEDIR"
 #define BWRAP_VAR_COPY      "$COPY"
 #define BWRAP_VAR_COPY_TRY  "$COPY-TRY"
+
+/* Copied data is buffered in a pipe until the reader starts after exec. */
+#define BWRAP_COPY_MAX_SIZE (1024 * 1024)
+
+#ifndef F_SETPIPE_SZ
+#define F_SETPIPE_SZ 1031
+#endif
+#ifndef F_GETPIPE_SZ
+#define F_GETPIPE_SZ 1032
+#endif
+
+/* Grow a copy pipe so the whole source fits before its reader starts.
+ * Shared by the bwrap and namespace copy paths. */
+static inline int bwrap_fit_copy_pipe(int pipe_fd, off_t size)
+{
+    int capacity;
+
+    if (size > BWRAP_COPY_MAX_SIZE)
+    {
+        errno = EFBIG;
+        return -1;
+    }
+    capacity = fcntl(pipe_fd, F_GETPIPE_SZ);
+    if (capacity == -1)
+        return -1;
+    if (size > capacity && fcntl(pipe_fd, F_SETPIPE_SZ, (int)size) == -1)
+        return -1;
+    return 0;
+}
 
 #define BWRAP_DEFAULT_DIR   "/bin"
 #define BWRAP_DEFAULT_BIN   BWRAP_DEFAULT_DIR "/bwrap"

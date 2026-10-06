@@ -1254,87 +1254,108 @@ static int setup_bind_tmp(lscgid_t *pCGI, SetupOp *op)
 }
 
 
+static int setup_copy_skip(SetupOp *op)
+{
+    ls_stderr("Namespace warning: skipping copy source %s; "
+              "continuing CGI startup\n", op->source);
+    op->type = SETUP_NOOP;
+    op->fd = -1;
+    return 0;
+}
+
 static int setup_copy(lscgid_t *pCGI, SetupOp *op, int index)
 {
-    int fds[2];
-    int rc;
+    int fds[2] = { -1, -1 };
+    int fd = -1;
     DEBUG_MESSAGE("setup_copy\n");
+    /* Configuration errors fail the request.  Problems with the copy source
+     * itself only skip this copy. */
     if (!op->source || !op->dest)
     {
         ls_stderr("Namespace missing source or dest to copy\n");
         return DEFAULT_ERR_RC;
     }
-    if (geteuid() == 0 && (rc = check_root_protected_file(op->source)))
-    {
-        if (rc == 404 && (op->flags & (OP_FLAG_ALLOW_NOTEXIST |
-                                      OP_FLAG_SOURCE_CREATE)))
-        {
-            DEBUG_MESSAGE("Protected copy source does not exist, set op to "
-                          "NOOP: %s\n", op->source);
-            op->type = SETUP_NOOP;
-            return 0;
-        }
-        ls_stderr("Namespace refusing unprotected root copy source: %s\n",
-                  op->source);
-        return rc;
-    }
-    int fd = open(op->source, O_RDONLY | O_CLOEXEC);
+    fd = open(op->source, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
     if (fd == -1)
     {
         int err = errno;
-        if (err == ENOENT && (op->flags & OP_FLAG_ALLOW_NOTEXIST || 
-                              op->flags & OP_FLAG_SOURCE_CREATE))
+        if (err == ENOENT && (op->flags & (OP_FLAG_ALLOW_NOTEXIST |
+                                           OP_FLAG_SOURCE_CREATE)))
         {
             DEBUG_MESSAGE("Does not exist, set op to NOOP: %s\n", op->source);
             op->type = SETUP_NOOP;
+            op->fd = -1;
             return 0;
         }
         ls_stderr("Namespace error opening source in copy %s: %s\n", op->source,
                   strerror(err));
-        return nsopts_rc_from_errno(err);
+        return setup_copy_skip(op);
     }
+    struct stat st;
+    if (fstat(fd, &st) == -1)
+    {
+        ls_stderr("Namespace error inspecting copy source %s: %s\n",
+                  op->source, strerror(errno));
+        goto fail;
+    }
+    if (!S_ISREG(st.st_mode))
+    {
+        ls_stderr("Namespace copy source is not a regular file: %s\n", op->source);
+        goto fail;
+    }
+    if (geteuid() == 0 && check_root_copy_source(op->source))
+        ls_stderr("Namespace warning: copy source policy check failed for %s; "
+                  "continuing copy\n", op->source);
     if (pipe(fds))
     {
         int err = errno;
         ls_stderr("Namespace error creating pipe to copy: %s\n", strerror(err));
-        close(fd);
-        return nsopts_rc_from_errno(err);
+        goto fail;
+    }
+    int flags = fcntl(fds[1], F_GETFL);
+    if (flags == -1 || fcntl(fds[1], F_SETFL, flags | O_NONBLOCK) == -1)
+    {
+        int err = errno;
+        ls_stderr("Namespace error preparing pipe to copy: %s\n", strerror(err));
+        goto fail;
+    }
+    if (bwrap_fit_copy_pipe(fds[1], st.st_size) == -1)
+    {
+        int err = errno;
+        ls_stderr("Namespace copy source %s (%lld bytes) does not fit the copy "
+                  "pipe (limit %d bytes): %s\n", op->source,
+                  (long long)st.st_size, BWRAP_COPY_MAX_SIZE, strerror(err));
+        goto fail;
     }
     char block[BLOCK_SIZE];
     int bytes;
-    fcntl(fds[1], F_SETFL, (fcntl(fds[1], F_GETFL, 0) | O_NONBLOCK));
     while ((bytes = read(fd, block, BLOCK_SIZE)) > 0)
     {
-        if (write(fds[1], block, bytes) == -1)
+        ssize_t written = write(fds[1], block, bytes);
+        if (written != bytes)
         {
-            int err = errno;
-            close(fd);
-            close_pipe(fds);
-            if (!(op->flags & OP_FLAG_ALLOW_NOTEXIST) && 
-                !(op->flags & OP_FLAG_SOURCE_CREATE))
-            {
-                ls_stderr("Namespace error writing to pipe in copy: %s", 
-                          strerror(err));
-                return nsopts_rc_from_errno(err);
-            }
-            DEBUG_MESSAGE("Can't write to file in copy, set op to NOOP: %s\n", strerror(err));
-            op->type = SETUP_NOOP;
-            return 0;
+            int err = written < 0 ? errno : EIO;
+            ls_stderr("Namespace error writing to pipe in copy: %s\n",
+                      strerror(err));
+            goto fail;
         }
     }
     if (bytes < 0)
     {
         int err = errno;
-        ls_stderr("Namespace error reading from %s in copy: %s", op->source,
+        ls_stderr("Namespace error reading from %s in copy: %s\n", op->source,
                   strerror(err));
-        close(fd);
-        close_pipe(fds);
-        return nsopts_rc_from_errno(err);
+        goto fail;
     }
     close(fd);
     close(fds[1]);
     op->fd = fds[0];
     return 0;
+
+fail:
+    close(fd);
+    close_pipe(fds);
+    return setup_copy_skip(op);
 }
 
 

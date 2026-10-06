@@ -118,7 +118,7 @@ static int check_root_parent(char *path, char *stat_operation,
 }
 
 
-static int check_root_path(char *path, int protected_file)
+static int check_root_path(char *path, int protected_file, int require_root_owner)
 {
     struct stat st;
     int rc;
@@ -130,7 +130,7 @@ static int check_root_path(char *path, int protected_file)
                            : "lscgid: lstat() executable",
             path);
 
-    if (st.st_uid != 0)
+    if (st.st_uid != 0 && (require_root_owner || S_ISLNK(st.st_mode)))
         return root_path_denied(
             protected_file
                 ? (S_ISLNK(st.st_mode)
@@ -171,7 +171,7 @@ static int check_root_path(char *path, int protected_file)
             protected_file ? "lscgid: stat() protected file link target"
                            : "lscgid: stat() executable link target",
             target);
-    else if (st.st_uid != 0)
+    else if (require_root_owner && st.st_uid != 0)
         rc = root_path_denied(
             protected_file
                 ? "lscgid: protected file link target is not owned by root"
@@ -210,13 +210,32 @@ int check_root_exec_path(lscgid_t *cgi)
 
 int check_root_executable(char *path)
 {
-    return check_root_path(path, 0);
+    return check_root_path(path, 0, 1);
 }
 
 
 int check_root_protected_file(char *path)
 {
-    return check_root_path(path, 1);
+    return check_root_path(path, 1, 1);
+}
+
+
+int check_root_copy_source(char *path)
+{
+    /* Copied data may be maintained by a service account, for example the
+     * mail-owned /etc/exim.jail/<user>.conf files.  Check for a regular file
+     * with no group/other write access in a root-protected directory, but
+     * do not apply the executable/configuration file ownership policy.
+     * Also check symlink ownership and the target directory.  Copy callers
+     * treat policy failures as warnings and continue copying, so report the
+     * details to stderr without recording them as the request error. */
+    rootcheck_error_cb saved = s_error_callback;
+    int rc;
+
+    s_error_callback = NULL;
+    rc = check_root_path(path, 1, 0);
+    s_error_callback = saved;
+    return rc;
 }
 
 
