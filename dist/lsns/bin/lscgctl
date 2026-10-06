@@ -16,7 +16,6 @@ def validate_environment():
     if not os.path.isfile('/etc/systemd/system.control/user.slice.d/50-IOAccounting.conf'):
         logging.debug('Activate accounting')
         run_program(['systemctl', 'set-property', 'user.slice', 'IOAccounting=yes', 'MemoryAccounting=yes', 'TasksAccounting=yes'])
-        systemctl_daemon_reload()
     
 def init_pgm():
     common.init_logging()
@@ -82,31 +81,30 @@ def user_to_file(user):
 def user_to_filename(user):
     return '/sys/fs/cgroup/user.slice/%s' % user_to_file(user)
 
-def systemctl_show(user):
-    return run_program(['systemctl', 'show', user_to_file(user)])
+SHOW_PROPERTIES = ['CPUQuotaPerSecUSec', 'IOReadBandwidthMax', 'IOReadIOPSMax', 'MemoryMax', 'TasksMax']
 
-def systemctl_daemon_reload():
-    logging.debug("Do daemon-reload")
-    run_program(['systemctl', 'daemon-reload'])
+def systemctl_show(user):
+    pgm_parms = ['systemctl', 'show']
+    for prop in SHOW_PROPERTIES:
+        pgm_parms.extend(['-p', prop])
+    pgm_parms.append(user_to_file(user))
+    return run_program(pgm_parms)
 
 def get_systemctl_item(result, item):
-    start = result.find(item)
-    if start == -1:
-        logging.debug('%s not found in systemctl output' % item)
-        return ""
-    eol = result[start:].find('\n')
-    if eol == -1:
-        logging.debug('new line not found in search after finding %s' % item)
-        eol = len(result[start:])
-    equals = result[start:start+eol].find('=')
-    if equals == -1 or equals > eol:
-        logging.debug('equals not found in systemctl output search for %s: %s' % (item, result[start:start+eol]))
-        return ""
-    value = result[start+equals+1:start+eol]
-    if value == 'infinity':
-        return ''
-    logging.debug('systemctl show for ' + item + ':' + value)
-    return value
+    # Match the whole property name at the start of a line.  A substring search
+    # hits DropInPaths= (e.g. 50-MemoryMax.conf) or EffectiveMemoryMax=, which
+    # newer systemd lists before the property itself.
+    prefix = item + '='
+    for line in result.splitlines():
+        if not line.startswith(prefix):
+            continue
+        value = line[len(prefix):]
+        if value == 'infinity':
+            return ''
+        logging.debug('systemctl show for ' + item + ':' + value)
+        return value
+    logging.debug('%s not found in systemctl output' % item)
+    return ""
     
 def get_systemctl_dev_num(result, item):
     val = get_systemctl_item(result, item)
@@ -162,6 +160,8 @@ def command_list(users):
     return 0
 
 def set_properties(user, properties):
+    # set-property applies to the running unit immediately and registers its
+    # own drop-ins with systemd, so no daemon-reload is needed afterwards.
     pgm_parms = ['systemctl', 'set-property', user_to_file(user)]
     pgm_parms.extend(properties)
     return run_program(pgm_parms)
@@ -207,31 +207,28 @@ def set_no_device_parm(args, option, properties):
         properties.append('MemoryHigh=')
 
     
-def reset_user(args, user, reload):
+def reset_user(args, user):
     args.cpu = '-1'
     args.io = '-1'
     args.iops = '-1';
     args.mem = '-1'
     args.tasks = '-1'
     users = [user]
-    return set_user(args, users, reload)
+    return set_user(args, users)
 
 def command_reset(args, users):
     if args.command == 'reset' or args.command == 'reset-user':
         for user in users:
-            reset_user(args, user, True)
+            reset_user(args, user)
     else:
         users = common.getpwall()
-        need_reload = len(users) > 0
         for listuser in users:
             reset_user(args, listuser)
-        if need_reload:
-            systemctl_daemon_reload()
     if not args.quiet:
         logging.info("Reset successful")
     return 0
 
-def set_user(args, users, reload):
+def set_user(args, users):
     properties = []
     if args.cpu != None:
         set_no_device_parm(args, common.OPTION_CPU, properties)
@@ -245,22 +242,15 @@ def set_user(args, users, reload):
         set_no_device_parm(args, common.OPTION_TASKS, properties)
     for user in users:
         set_properties(user, properties)
-    if reload:
-        systemctl_daemon_reload()
     if not args.quiet:
         return command_list(users)
     return 0
 
 def command_set(args, users):
     if args.command == 'set' or args.command == 'set-user':
-        set_user(args, users, True)
+        set_user(args, users)
     else:
-        users = common.getpwall()
-        need_reload = len(users) > 0
-        for listuser in users:
-            set_user(args, listuser, False)
-        if need_reload:
-            systemctl_daemon_reload()
+        set_user(args, common.getpwall())
     if not args.quiet:
         logging.info("Set successful")
     return 0

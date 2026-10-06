@@ -285,7 +285,7 @@ def set_users_to_pkg(opt, users, users_vals, org_pkg, pkg_json, force, args_dict
     # (optionally K/M/G/T-suffixed) value, not e.g. "--mem=evil" smuggled via a
     # crafted package JSON.
     cgval = common.validate_numeric_value(cgval)
-    args = [common.get_bin_file('lscgctl'), '--' + opt, cgval, 'set']
+    args = [common.get_bin_file('lscgctl'), '-q', '--' + opt, cgval, 'set']
     found_diff = False
     for user in users:
         if not user in pkg_json['uids']:
@@ -414,7 +414,7 @@ def set_json(args, pkg_json):
     return changed
 
 def get_users_vals():
-    pgm_args = [common.get_bin_file('lscgctl'), 'list-all', 'q']    
+    pgm_args = [common.get_bin_file('lscgctl'), '-q', 'list-all']
     out = run_program(pgm_args)
     try:
         users_vals = json.loads(out)

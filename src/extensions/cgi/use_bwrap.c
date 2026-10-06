@@ -49,6 +49,9 @@ set_cgi_error_t set_cgi_error = NULL;
 int s_bwrap_extra_bytes = BWRAP_ALLOCATE_EXTRA_DEFAULT;
 static char *s_bwrap_bin = NULL;
 
+/* Keep resource failures distinct from invalid command-line arguments. */
+#define BWRAP_ARG_NOMEM (-2)
+
 static int add_argv(lscgid_t *pCGI, char *begin_param, int *argc, char ***oargv,
                     bwrap_mem_t **mem);
 
@@ -103,8 +106,8 @@ static int bwrap_allocate_extra(bwrap_mem_t **mem, int extra)
     DEBUG_MESSAGE("Allocate extra: %d total bytes, extra: %d\n", total, extra);
     if (!new)
     {
-        set_cgi_error("Error allocating additional bwrap required memory", NULL);
-        return -1;
+        ls_stderr("bwrap: insufficient memory expanding command-line variable\n");
+        return BWRAP_ARG_NOMEM;
     }
     memset(new, 0, sizeof(bwrap_mem_t));
     new->m_next = *mem;
@@ -327,104 +330,132 @@ static int bwrap_copy(lscgid_t *pCGI, int try, char *begin_param, char *wildcard
     const int block_size = 4096;
     char *title = BWRAP_VAR_COPY, *source = NULL, *target = NULL, block[block_size];
     int data[2] = { -1, -1 }, fd = -1, got, *fds;
+    int original_argc = *argc;
+    int copy_index = -1;
+    int rc = -1;
     char **argv = *oargv;
-    
+
+    /* Invalid configuration fails the request.  Resource failures and
+     * problems with the copy source itself only skip this copy. */
     if (bwrap_copy_params(wildcard, &source, &target))
         return -1;
     if (pipe(data))
     {
-        set_cgi_error("Error creating pipe for", title);
-        return -1;
+        ls_stderr("bwrap: error creating pipe for %s: %s\n", title,
+                  strerror(errno));
+        goto fail;
+    }
+    /* The reader starts only after exec.  Do not block CGI startup when a
+     * copied file exceeds the pipe capacity. */
+    int flags = fcntl(data[1], F_GETFL);
+    if (flags == -1 || fcntl(data[1], F_SETFL, flags | O_NONBLOCK) == -1)
+    {
+        ls_stderr("bwrap: error preparing pipe for copy %s: %s\n", source,
+                  strerror(errno));
+        goto fail;
     }
 
-    (*mem)->m_statics->m_copy_num++;
-    fds = realloc((*mem)->m_statics->m_copy_fds, 
-                  sizeof(int) * (*mem)->m_statics->m_copy_num);
+    int copy_num = (*mem)->m_statics->m_copy_num + 1;
+    fds = realloc((*mem)->m_statics->m_copy_fds, sizeof(int) * copy_num);
     if (!fds)
     {
-        set_cgi_error("Insufficient memory allocating copy fd list", source);
-        close(data[0]);
-        return -1;
+        ls_stderr("bwrap: insufficient memory allocating copy fd list for %s\n",
+                  source);
+        goto fail;
     }
-    fds[(*mem)->m_statics->m_copy_num - 1] = data[0];
+    (*mem)->m_statics->m_copy_num = copy_num;
+    copy_index = copy_num - 1;
+    fds[copy_index] = data[0];
     (*mem)->m_statics->m_copy_fds = fds;
     snprintf(begin_param, strlen(title) + 1, "%u", data[0]); // Ok to step on it
-    if (add_argv(pCGI, "--file", argc, oargv, mem) ||
-        add_argv(pCGI, begin_param, argc, oargv, mem) ||
-        add_argv(pCGI, target, argc, oargv, mem) ||
-        add_argv(pCGI, source, argc, oargv, mem)) // add source to get wildcards resolved
-        return -1;
-    
-    --(*argc); // Pull out source
+    int arg_rc;
+    if ((arg_rc = add_argv(pCGI, "--file", argc, oargv, mem)) ||
+        (arg_rc = add_argv(pCGI, begin_param, argc, oargv, mem)) ||
+        (arg_rc = add_argv(pCGI, target, argc, oargv, mem)) ||
+        (arg_rc = add_argv(pCGI, source, argc, oargv, mem)))
+    {
+        if (arg_rc == BWRAP_ARG_NOMEM)
+            goto fail;
+        goto cleanup;
+    }
+
+    --(*argc);
     source = argv[*argc];
     target = argv[*argc - 1];
-    if (try && access(source, 0))
+    if (try && access(source, F_OK) == -1 && errno == ENOENT)
     {
-        DEBUG_MESSAGE("Source file not accessible and try specified.  Return\n");
-        close(data[0]);
-        close(data[1]);
-        (*argc) -= 3;
-        return 0;
+        DEBUG_MESSAGE("Optional copy source does not exist: %s\n", source);
+        goto skip;
     }
     DEBUG_MESSAGE("Copy final source: %s, final target: %s\n", source, target);
-    if (geteuid() == 0 && check_root_protected_file(source))
-    {
-        set_cgi_error("Refusing unprotected root copy source", source);
-        close(data[0]);
-        close(data[1]);
-        (*argc) -= 3;
-        return -1;
-    }
-    fd = open(source, O_RDONLY | O_CLOEXEC);
+    fd = open(source, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
     if (fd == -1)
     {
-        int err = errno;
-        DEBUG_MESSAGE("Error opening source %s: %s during copy\n", source, strerror(err));
-        errno = err;
-        set_cgi_error("Error opening during copy:", source);
-        close(data[0]);
-        close(data[1]);
-        (*argc) -= 3;
-        return -1;
+        ls_stderr("bwrap: error opening copy source %s: %s\n", source,
+                  strerror(errno));
+        goto fail;
     }
-    DEBUG_MESSAGE("For copy, doing copy\n");
-    fcntl(data[1], F_SETFL, (fcntl(data[1], F_GETFL, 0) | O_NONBLOCK));
+    struct stat st;
+    if (fstat(fd, &st) == -1)
+    {
+        ls_stderr("bwrap: error inspecting copy source %s: %s\n", source,
+                  strerror(errno));
+        goto fail;
+    }
+    if (!S_ISREG(st.st_mode))
+    {
+        ls_stderr("bwrap: copy source is not a regular file: %s\n", source);
+        goto fail;
+    }
+    /* COPY paths come from the administrator's sandbox configuration.  File
+     * ownership is advisory for copied data, unlike executable/config checks. */
+    if (geteuid() == 0 && check_root_copy_source(source))
+        ls_stderr("bwrap: warning: copy source policy check failed for %s; "
+                  "continuing copy\n", source);
+    if (bwrap_fit_copy_pipe(data[1], st.st_size) == -1)
+    {
+        ls_stderr("bwrap: copy source %s (%lld bytes) does not fit the copy "
+                  "pipe (limit %d bytes): %s\n", source,
+                  (long long)st.st_size, BWRAP_COPY_MAX_SIZE, strerror(errno));
+        goto fail;
+    }
     while ((got = read(fd, block, block_size)) > 0)
     {
-        if (write(data[1], block, got) != got)
+        ssize_t written = write(data[1], block, got);
+        if (written != got)
         {
-            int err = errno;
-            DEBUG_MESSAGE("Error writing: %s during copy\n", strerror(err));
-            close(data[0]);
-            close(data[1]);
-            close(fd);
-            (*argc) -= 3;
-            if (!try)
-            {
-                errno = err;
-                set_cgi_error("Error writing during copy:", source);
-                return -1;
-            }
-            return 0;
+            ls_stderr("bwrap: error writing copy source %s: %s\n", source,
+                      strerror(written < 0 ? errno : EIO));
+            goto fail;
         }
     }
-    if (got < 0)
+    if (got == -1)
     {
-        int err = errno;
-        DEBUG_MESSAGE("Error reading %s during copy\n", strerror(err));
-        errno = err;
-        set_cgi_error("Error reading during copy:", source);
-        close(data[0]);
-        close(data[1]);
-        close(fd);
-        (*argc) -= 3;
-        return -1;
+        ls_stderr("bwrap: error reading copy source %s: %s\n", source,
+                  strerror(errno));
+        goto fail;
     }
     close(fd);
     close(data[1]);
-    data[1] = -1;
-    DEBUG_MESSAGE("For copy, finished copy\n");
     return 0;
+
+fail:
+    ls_stderr("bwrap: warning: skipping copy source %s; continuing CGI startup\n",
+              source);
+skip:
+    rc = 0;
+cleanup:
+    if (fd != -1)
+        close(fd);
+    if (data[0] != -1)
+        close(data[0]);
+    if (data[1] != -1)
+        close(data[1]);
+    if (copy_index != -1)
+        (*mem)->m_statics->m_copy_fds[copy_index] = -1;
+    /* Discard the entire --file operation, including partially added args. */
+    *argc = original_argc;
+    return rc;
 }
 
 
@@ -449,8 +480,14 @@ static int bwrap_variable(lscgid_t *pCGI, char *begin_param, char *begin_wildcar
         if (!(*mem)->m_statics->m_username_str)
         {
             struct passwd *pwd;
+            errno = 0;
             if (!(pwd = getpwuid(pCGI->m_data.m_uid)))
             {
+                if (errno == ENOMEM)
+                {
+                    ls_stderr("bwrap: insufficient memory looking up command-line user\n");
+                    return BWRAP_ARG_NOMEM;
+                }
                 set_cgi_error("Error getting passwd entry for effective user", strerror(errno));
                 return -1;
             }
@@ -472,7 +509,7 @@ static int bwrap_variable(lscgid_t *pCGI, char *begin_param, char *begin_wildcar
                     extra_len = name_len + dir_len;
                     if (((*mem)->m_extra < extra_len) &&
                         (bwrap_allocate_extra(mem, extra_len)))
-                        return -1;
+                        return BWRAP_ARG_NOMEM;
                     (*mem)->m_statics->m_username_str = (char *)(*mem) + (*mem)->m_total - (*mem)->m_extra;
                     (*mem)->m_statics->m_userdir_str = (*mem)->m_statics->m_username_str + name_len;
                     (*mem)->m_extra -= extra_len;
@@ -529,7 +566,7 @@ static int bwrap_variable(lscgid_t *pCGI, char *begin_param, char *begin_wildcar
         char *arg;
         if (extra_needed > (*mem)->m_extra &&
             bwrap_allocate_extra(mem, extra_needed))
-            return -1;
+            return BWRAP_ARG_NOMEM;
         arg = (char *)(*mem) + (*mem)->m_total - (*mem)->m_extra;
         (*mem)->m_extra -= extra_needed;
         memcpy(arg, begin_param, before_wildcard_len);
@@ -569,8 +606,7 @@ static int add_argv(lscgid_t *pCGI, char *begin_param, int *argc, char ***oargv,
     }
     else if ((begin_wildcard = strchr(begin_param, '$')))
     {
-        if (bwrap_variable(pCGI, begin_param, begin_wildcard, argc, oargv, mem))
-            return -1;
+        return bwrap_variable(pCGI, begin_param, begin_wildcard, argc, oargv, mem);
     }
     else if (!strcmp(begin_param, "bash") || !strcmp(begin_param, "/bin/bash") ||
              !strcmp(begin_param, "sh") || !strcmp(begin_param, "/bin/sh") ||
@@ -736,11 +772,8 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
         if (end_param)
         {
             *ch = 0;
-            if (add_argv(pCGI, begin_param, argc, &argv, mem))
-            {
-                rc = -1;
+            if ((rc = add_argv(pCGI, begin_param, argc, &argv, mem)))
                 break;
-            }
             begin_param = NULL;
         }
         ++ch;
@@ -754,6 +787,12 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
         rc = add_argv(pCGI, begin_param, argc, &argv, mem);
     if (rc)
     {
+        /* Outside a copy, an expansion failure still aborts the request. */
+        if (rc == BWRAP_ARG_NOMEM)
+        {
+            errno = ENOMEM;
+            set_cgi_error("Error allocating memory for bwrap command", NULL);
+        }
         bwrap_free(mem);
         *oargv = NULL;
         *done = 1;
@@ -838,7 +877,8 @@ void bwrap_free(bwrap_mem_t **mem)
         {
             int i;
             for (i = 0; i < (*mem)->m_statics->m_copy_num; ++i)
-                close((*mem)->m_statics->m_copy_fds[i]);
+                if ((*mem)->m_statics->m_copy_fds[i] >= 0)
+                    close((*mem)->m_statics->m_copy_fds[i]);
             free((*mem)->m_statics->m_copy_fds);
         }
     }

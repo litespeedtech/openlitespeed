@@ -36,7 +36,6 @@ def validate_environment(args):
     if not args.namespace_only and not args.disable and not os.path.isfile('/etc/systemd/system.control/user.slice.d/50-IOAccounting.conf'):
         logging.debug('Activate accounting')
         run_program(['systemctl', 'set-property', 'user.slice', 'IOAccounting=yes', 'MemoryAccounting=yes', 'TasksAccounting=yes'])
-        systemctl_daemon_reload()
     
 def init_pgm():
     common.init_logging()

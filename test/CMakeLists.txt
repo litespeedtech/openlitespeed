@@ -357,3 +357,23 @@ lsr/ls_valgrindtest.c
 ${lsr_SRCS}
 )
 target_link_libraries(ls_valgrindtest lsr thread pthread pcre2-8 )
+
+# Passive copy preparation tests need root only for disposable ownership fixtures.
+# Keep this C runner separate from UnitTest++ and skip it for ordinary users.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(extensions_cgidcopytest
+        extensions/cgidcopytest.c
+        ../src/extensions/cgi/rootcheck.c
+        ../src/extensions/cgi/use_bwrap.c
+        ../src/extensions/cgi/nsopts.c)
+    target_include_directories(extensions_cgidcopytest PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/extensions/cgi)
+    target_compile_options(extensions_cgidcopytest PRIVATE
+        -ffunction-sections -fdata-sections -Wno-unused-function)
+    target_link_libraries(extensions_cgidcopytest
+        -Wl,--gc-sections -Wl,--wrap=malloc -Wl,--wrap=getpwuid -Wl,--wrap=stat)
+    add_test(NAME extensions_cgidcopytest COMMAND extensions_cgidcopytest)
+    set_tests_properties(extensions_cgidcopytest PROPERTIES
+        SKIP_RETURN_CODE 77 TIMEOUT 30
+        ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0")
+endif()

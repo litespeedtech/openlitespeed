@@ -17,7 +17,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Installation",
         "url": "install.html",
-        "text": "Installation Installation/Uninstallation Minimum system requirements Supported operating systems OpenLiteSpeed supports current and non-EOL versions of the following Linux distributions: CentOS* 8, 9, 10 Debian 11, 12, 13 Ubuntu 20 (EOL May 31, 2025), 22, 24 * Includes RedHat Enterprise Linux and derivatives, AlmaLinux, CloudLinux, Oracle Linux, RockyLinux, VzLinux, etc. CPU Intel: x86-64 ARM: aarch64 (Linux only) Me..."
+        "text": "Installation Installation/Uninstallation Minimum system requirements Supported operating systems OpenLiteSpeed supports current and non-EOL versions of the following Linux distributions: CentOS* 8, 9, 10 Debian 11, 12, 13 Ubuntu 22, 24, 26 * Includes RedHat Enterprise Linux and derivatives, AlmaLinux, CloudLinux, Oracle Linux, RockyLinux, VzLinux, etc. CPU Intel: x86-64 ARM: aarch64 (Linux only) Memory 512MB and up D..."
     },
     {
         "title": "Administration",
