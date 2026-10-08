@@ -804,7 +804,13 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                                 m_pRespHeaderProcess, pHeaderEnd - m_pRespHeaderProcess);
                             m_pRespHeaderProcess = pHeaderEnd;
                             if (getConnector()->processCompleteRespHeader() == -1)
+                            {
+                                // Application error, not a connection error:
+                                // ECONNRESET keeps the worker pool out of it
+                                // (same as the "Invalid Http response header" path).
+                                errno = ECONNRESET;
                                 return -1;
+                            }
                         }
                         else
                         {
@@ -823,7 +829,10 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                             if (HttpCgiTool::processHeaderLine(
                                     getConnector(),
                                     m_pRespHeaderProcess, pHeaderEnd) == -1)
+                            {
+                                errno = ECONNRESET;
                                 return -1;
+                            }
                             m_pRespHeaderProcess += len;
                         }
                         else

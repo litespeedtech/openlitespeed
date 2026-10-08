@@ -376,8 +376,20 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         LS_DBG_H(pExtConn->getHttpSession()->getLogSession(),
                 "append response header: %.*s: %.*s", nameLen, pName,
                 valLen, pValue);
-        return pExtConn->getHttpSession()->getResp()->appendHeader(
+        ret = pExtConn->getHttpSession()->getResp()->appendHeader(
                     index, pName, nameLen, pValue, valLen);
+        if (ret == -1)
+        {
+            // A header line above HRH_MAX_LEN is rejected by HttpRespHeaders.
+            // This is the application's response, not a connection problem:
+            // name the header (the callers only see -1) and answer with 500
+            // right here, so the request is not retried against the backend.
+            LS_WARN(pExtConn->getHttpSession()->getLogSession(),
+                    "Failed to add response header '%.*s' with a %d bytes "
+                    "value, a header line is limited to %d bytes.",
+                    nameLen, pName, valLen, HRH_MAX_LEN);
+            pExtConn->errResponse(SC_500, NULL);
+        }
     }
     return ret;
 }
