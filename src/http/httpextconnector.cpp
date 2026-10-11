@@ -387,7 +387,7 @@ int HttpExtConnector::endResponse(int endCode, int protocolStatus)
     if (m_iState & HEC_COMPLETE)
         return 0;
     if (!(m_iRespState & HttpReq::HEADER_OK)
-        && !(m_iState & HEC_ABORT_REQUEST))
+        && !(m_iState & (HEC_ABORT_REQUEST | HEC_ERROR)))
     {
         m_iRespState |= HttpReq::HEADER_OK;
         LS_NOTICE(this, "Premature end of response header.");
@@ -656,7 +656,10 @@ int HttpExtConnector::onRead(HttpSession *pSession)
 
 bool HttpExtConnector::isRecoverable()
 {
-    if (m_iState & HEC_FWD_RESP_BODY)
+    // HEC_ERROR means an error response has already been decided for this
+    // request (errResponse()); retrying would re-run the application and
+    // throw that decision away.
+    if (m_iState & (HEC_FWD_RESP_BODY | HEC_ERROR))
         return false;
     //if ( m_iReqBodySent == 0 )
     //    return true;
