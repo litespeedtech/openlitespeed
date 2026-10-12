@@ -61,6 +61,7 @@ END_LOG4CXX_NS
 #define VH_BWRAP            (1<<14)
 #define VH_STRICT_OWNER     (1<<15)
 #define VH_NS               (1<<16)
+#define VH_ZSTD             (1<<17)
 
 #define MAX_VHOST_PHP_NUM    100
 
@@ -337,6 +338,9 @@ public:
 
     void enableBr(int enable)         {   setFeature(VH_BR, enable);      }
     int  enableBr() const               {   return m_iFeatures & VH_BR;     }
+
+    void enableZstd(int enable)       {   setFeature(VH_ZSTD, enable);    }
+    int  enableZstd() const             {   return m_iFeatures & VH_ZSTD;   }
 
     void enableCGroup(int enable)       {   setFeature(VH_CGROUP, enable);    }
     int  enableCGroup() const             {   return m_iFeatures & VH_CGROUP;   }

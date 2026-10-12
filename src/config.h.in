@@ -269,6 +269,10 @@
 /* Defined to compile with Brotli compression included */
 #undef USE_BROTLI
 
+/* Define to 1 if libzstd (>= 1.4.0) is available, to enable
+   Accept-Encoding: zstd support. */
+#undef USE_ZSTD
+
 /* Defined to use boringSSL */
 #undef USE_BSSL
 
