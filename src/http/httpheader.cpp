@@ -597,6 +597,13 @@ void HttpHeaderOps::inherit(const HttpHeaderOps &parent)
     if (parent.m_has_resp_op)
         m_has_resp_op = 1;
 
+    m_hasLinkOp = 0;
+    for (iter = begin(); iter < end(); ++iter)
+        if (!iter->isReqHeader() && iter->getIndex() == HttpRespHeaders::H_LINK)
+        {
+            m_hasLinkOp = 1;
+            break;
+        }
 }
 
 
@@ -641,6 +648,8 @@ HeaderOp *HttpHeaderOps::append(int16_t index, const char *pName,
         m_has_resp_op = 1;
     }
     new(pHeader) HeaderOp(index, pName, nameLen, pVal, valLen, flag, op);
+    if (!is_req && index == HttpRespHeaders::H_LINK)
+        m_hasLinkOp = 1;
     return pHeader ;
 }
 

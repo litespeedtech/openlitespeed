@@ -104,6 +104,7 @@ rm -rf "$BASE_DIR"/fcgi-bin
 rm -rf "$BASE_DIR"/admin/cgid
 rm -rf "$BASE_DIR"/admin/fcgi-bin
 rm -rf "$BASE_DIR"/admin/html.open
+rm -rf "$BASE_DIR"/admin/html.disabled
 rm -rf "$BASE_DIR"/admin/misc
 rm -rf "$BASE_DIR"/admin/tmp
 rm "$BASE_DIR"/admin/html

@@ -137,8 +137,10 @@ set(OLS_UNITTEST_FULL_SRCS
    http/statusurlmaptest.cpp
    http/contexttreetest.cpp
    http/httpmimetest.cpp
+   http/multipartbodyguardtest.cpp
    http/httpcgitooltest.cpp
    http/httpsessiontest.cpp
+   http/earlyhintstest.cpp
    http/chunkostest.cpp
    http/chunkistest.cpp
    http/httplistenerstest.cpp
@@ -274,6 +276,12 @@ if(OLS_SPLIT_UNIT_TESTS)
         add_ols_unit_test("${test_dir_name}_${test_name}"
             OLS_FULL_COMMON_SRCS unittestlib "${test_src}")
     endforeach()
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_compile_definitions(http_earlyhintstest PRIVATE OLS_TEST_QUIC_HEADERS)
+        set_property(TARGET http_earlyhintstest APPEND_STRING PROPERTY LINK_FLAGS
+            " -Wl,--wrap=lsquic_stream_send_headers,--wrap=lsquic_stream_wantwrite,--wrap=lsquic_stream_flush,--wrap=lsquic_stream_shutdown,--wrap=_ZN15HttpRespHeaders15buildEarlyHintsERS_")
+    endif()
 
     set_tests_properties(
         thread_workcrewtest

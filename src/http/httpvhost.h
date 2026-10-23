@@ -143,17 +143,6 @@ struct static_file_data_t
 typedef  THash<static_file_data_t *> UrlStxFileHash;
 
 
-typedef struct _url_id_data
-{
-    AutoStr2 url;
-    u_int32_t  id;
-} url_id_data_t;
-
-/**
- * UrlIdHash define a url ---> id mapping hash
- */
-typedef  THash<url_id_data_t *> UrlIdHash;
-
 class HttpVHost : public RefCounter, public HttpLogSource
 {
 public:
@@ -182,6 +171,7 @@ private:
     int16_t             m_iMaxKeepAliveRequests;
     char                m_iRewriteLogLevel;
     char                m_iGlobalMatchContext;
+    int8_t              m_iEarlyHints;
 
     uint32_t            m_iFeatures;
 
@@ -223,7 +213,6 @@ private:
     UrlStxFileHash     *m_pUrlStxFileHash;
     php_xml_st          m_pPhpXmlNodeS[MAX_VHOST_PHP_NUM];
 
-    UrlIdHash          *m_pUrlIdHash;
 
     HttpVHost(const HttpVHost &rhs);
     void operator=(const HttpVHost &rhs);
@@ -346,6 +335,9 @@ public:
 
     void enableNS(int enable)         {   setFeature(VH_NS, enable);    }
     int  enableNS() const             {   return m_iFeatures & VH_NS;       }
+
+    void setEarlyHints(int mode)        {   m_iEarlyHints = mode;           }
+    int getEarlyHints() const;
 
     void enableQuic(int enable)       {   setFeature(VH_QUIC, enable);    }
     int  enableQuic() const             {   return m_iFeatures & VH_QUIC;   }
@@ -635,13 +627,6 @@ public:
     void removeurlStaticFile(static_file_data_t *data);
     static_file_data_t *getUrlStaticFileData(const char *url);
     void urlStaticFileHashClean();
-
-    int addUrlToUrlIdHash(const char *url);
-
-    /**
-     * return the bit of the url added to the hash
-     */
-    int getIdBitOfUrl(const char *url);
 
     bool isStrictOwner() const      {   return m_iFeatures & VH_STRICT_OWNER;   }
     void setStrictOwner(int v)

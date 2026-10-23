@@ -94,8 +94,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define SERVERPUSHTAG           "ls_smartpush"
-#define SERVERPUSHTAGLENGTH     (sizeof(SERVERPUSHTAG) - 1)
 
 
 static const char * s_stateName[HSPS_END] =
@@ -867,6 +865,14 @@ int HttpSession::readReqBody()
             LS_DBG_L(getLogSession(), "[LSI_HKPT_RECV_REQ_BODY] read %d bytes",
                      ret);
         }
+        if (m_request.isMultipartBodyBlocked())
+        {
+            LS_NOTICE(getLogSession(), "Blocked multipart request body by the "
+                      "PHP upload-progress NUL guard.");
+            getStream()->wantRead(0);
+            m_request.keepAlive(false);
+            return SC_403;
+        }
         if (ret > 0)
         {
             readbytes += ret;
@@ -1029,7 +1035,11 @@ int HttpSession::readReqBodyTermination(LsiSession *pSession, char *pBuf,
             len = pThis->read(pBuf, toRead);
     }
     if (len > 0)
+    {
         pThis->m_request.contentRead(len);
+        if (pThis->m_request.inspectMultipartBody(pBuf, len))
+            return -1;
+    }
 
     return len;
 }
@@ -2808,6 +2818,16 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
 
     setState(HSS_PROCESSING);
     pTC->incReqProcessed( dyn );
+    //Module handlers can serve ready responses, including LSCache hits.
+    if (dyn && type != HandlerType::HT_MODULE && earlyHintsEnabled()
+        && !getFlag2(HSF2_EARLY_HINTS_SENT)
+        && m_request.hasLinkHeaderOps())
+    {
+        HttpRespHeaders headers;
+        if (m_request.applyHeaderOps(this, &headers, true) == LS_OK
+            && sendEarlyHints(headers) == LS_FAIL)
+            return SC_500;
+    }
     ret = m_pHandler->process(this, m_request.getHttpHandler());
 
     if (ret == 1)
@@ -3168,6 +3188,18 @@ int HttpSession::onReadEx()
             && !(m_iFlag & HSF_HANDLER_DONE))
         {
             ret = readReqBody();
+            if (ret == SC_403 && m_request.isMultipartBodyBlocked())
+            {
+                // The body was rejected mid-stream; a handler may already be
+                // running against it. Tear it down before sending the error so
+                // we do not race a live backend or multi-threaded module.
+                if (m_pHandler && cleanUpHandler(HSPS_HTTP_ERROR) == LS_AGAIN)
+                    return 0;
+                setProcessState(HSPS_HTTP_ERROR);
+                if (getStream()->getState() < HIOS_SHUTDOWN)
+                    httpError(ret);
+                break;
+            }
             //TODO: This is a temp fix.  Cannot put smProcessReq in reqBodyDone
             // because it will call state machine twice, results in seg fault.
             // Basically, need to call state machine once it's finished reading
@@ -3264,8 +3296,8 @@ int HttpSession::doWrite()
             if (host && m_sendFileInfo.getFileData())
             {
                 host->addUrlStaticFileMatch(m_sendFileInfo.getFileData(),
-                                            getReq()->getOrgReqURL(),
-                                            getReq()->getOrgReqURLLen());
+                                            getReq()->getUrlStaticFileCacheKey(),
+                                            getReq()->getUrlStaticFileCacheKeyLen());
                 LS_DBG_L( getLogSession(), "[static file cache] create cache." );
             }
             setFlag(HSF_SAVE_STX_FILE_CACHE, 0);
@@ -4822,265 +4854,57 @@ void HttpSession::prepareHeaders()
     m_request.applyHeaderOps(this, &headers);
 }
 
-/**
- * Every 8 bit cover 1 byte(2 bytes HEX)
- *
- * xxxxxxxx xxxxxxxx  xxxxxxxx  xxxxxxxx  xxxxxxxx ...
- * 0      7 8      15        23        31  ...
- *
- * Example
- * 1       2          3         4
- * 1000000 01000000   11000000  00100000
- *
- */
-void HttpSession::addBittoCookie(AutoStr2 &cookie, int bit)
+
+bool HttpSession::earlyHintsEnabled() const
 {
-    int i;
-    int len = cookie.len();
-    char s[3] = {'0', '0', 0};
-
-    for (i = len/2; i <= bit / 8; ++i)
-        cookie.append(s, 2);
-
-    i = bit / 8;
-    s[0] = *(cookie.c_str() + i * 2);
-    s[1] = *(cookie.c_str() + i * 2 + 1);
-
-    uint8_t bit8 = (uint8_t)strtoul(s, NULL, 16);
-    bit8 |= 1 << (bit % 8);
-    sprintf(s, "%02x", bit8);
-    char *p = (char *)(cookie.c_str());
-    memcpy(p + i * 2, s, 2);
+    if (!getStream())
+        return false;
+    int mode = m_request.getVHost() ? m_request.getVHost()->getEarlyHints()
+                                   : HttpServerConfig::getInstance().getEarlyHints();
+    return mode != 0
+        && (getStream()->getProtocol() == HIOS_PROTO_HTTP2
+            || getStream()->getProtocol() == HIOS_PROTO_HTTP3
+            || (mode == 2 && getStream()->getProtocol() == HIOS_PROTO_HTTP
+                && m_request.getVersion() == HTTP_1_1));
 }
 
-/**
- * 1 fot true, 0 for false
- */
-int HttpSession::isCookieHaveBit(const char *cookie, int bit)
+
+int HttpSession::sendEarlyHints(HttpRespHeaders &headers)
 {
-    int size = strlen(cookie);
-    if (bit / 8 >= size/2)
-        return 0;
+    if (!headers.isHeaderSet(HttpRespHeaders::H_LINK)
+        || !earlyHintsEnabled() || getFlag2(HSF2_EARLY_HINTS_SENT)
+        || isRespHeaderSent() || getFlag(HSF_SUB_SESSION)
+        || m_request.isCaptchaUrl()
+        || m_request.getStatusCode() < SC_200
+        || m_request.getStatusCode() >= SC_300
+        || (m_request.getMethod() != HttpMethod::HTTP_GET
+            && m_request.getMethod() != HttpMethod::HTTP_HEAD))
+        return LS_OK;
 
-    char s[3] = {0};
-    int i= bit / 8;
-    s[0] = cookie[i * 2];
-    s[1] = cookie[i * 2 + 1];
-    uint8_t bit8 = (uint8_t)strtoul(s, NULL, 16);
-    if (bit8 & (1 << (bit % 8)))
-        return 1;
-    else
-        return 0;
-}
-
-int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
-{
-    char buf[16384];
-    if (*pUri != '/')
+    HttpRespHeaders hints;
+    int count = headers.buildEarlyHints(hints);
+    if (count < 0)
     {
-        int len = m_request.toLocalAbsUrl(pUri, uriLen, buf, sizeof(buf) - 1);
-        if (len == -1)
-            return -1;
-        uriLen = len;
+        LS_WARN(getLogSession(),
+                "Skipping 103 Early Hints: failed to build Link headers.");
+        return LS_OK;
     }
-    else
+    if (count == 0)
+        return LS_OK;
+    hints.addStatusLine(m_request.getVersion(), SC_103, 1);
+    if (getStream()->sendRespHeaders(&hints, SHF_MORE_HDRS) == LS_FAIL)
     {
-        int maxSz = sizeof(buf) - 1;
-        if (uriLen > maxSz)
-            uriLen = maxSz;
-
-        memcpy(buf, pUri, uriLen);
-    }
-    pUri = buf;
-    buf[uriLen] = 0;
-
-    HttpVHost *pVHost = (HttpVHost *) m_request.getVHost();
-    int id = pVHost->getIdBitOfUrl(pUri);
-
-    if (id == -1)
-        id = pVHost->addUrlToUrlIdHash(pUri);
-    else
-    {
-        if (cookie.len() > 0)
-        {
-            int state = isCookieHaveBit(cookie.c_str(), id);
-            if (state == 1)
-                return 0;
-        }
-    }
-
-    ls_str_t uri;
-    ls_str_t host;
-    uri.ptr = (char *)pUri;
-    uri.len = uriLen;
-    host.ptr = (char *)m_request.getHeader(HttpHeader::H_HOST);
-    host.len = m_request.getHeaderLen(HttpHeader::H_HOST);
-    ls_strpair_t extraHeaders[8];
-    ls_strpair_t *p = extraHeaders;
-//     URICache::iterator iter;
-//     URICache *pCache = m_request.getVHost()->getURICache();
-//     char *pEnd = (char *)pUri + uriLen;
-//     char ch = *pEnd;
-//     *pEnd = 0;
-//     iter = pCache->find(pUri);
-//     *pEnd = ch;
-//     if (iter != pCache->end())
-//     {
-//         StaticFileCacheData *pData = iter.second()->getStaticCache();
-//         if (pData && pData->getETagValue())
-//         {
-//             p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(HttpHeader::H_IF_MATCH);
-//             p->key.len = 8;
-//             p->val.ptr = (char *)pData->getETagValue();
-//             p->val.len = pData->getETagValueLen();
-//             p++;
-//         }
-//     }
-
-    p->val.len = m_request.getHeaderLen(HttpHeader::H_ACC_ENCODING);
-    if (p->val.len > 0)
-    {
-        p->val.ptr = (char *)m_request.getHeader(HttpHeader::H_ACC_ENCODING);
-        p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(
-                                        HttpHeader::H_ACC_ENCODING);
-        p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_ACC_ENCODING);
-        p++;
-    }
-
-    p->val.len = m_request.getHeaderLen(HttpHeader::H_USERAGENT);
-    if (p->val.len > 0)
-    {
-        p->val.ptr = (char *)m_request.getHeader(HttpHeader::H_USERAGENT);
-        p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(
-                                        HttpHeader::H_USERAGENT);
-        p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_USERAGENT);
-        p++;
-    }
-    char referer[16484];
-    p->val.len = lsnprintf(referer, sizeof(referer), "https://%.*s%.*s",
-                          (int)host.len, host.ptr, m_request.getOrgReqURLLen(),
-                          m_request.getOrgReqURL());
-    p->val.ptr = referer;
-    p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(
-                                        HttpHeader::H_REFERER);
-    p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_REFERER);
-    p++;
-
-    memset(p, 0, sizeof(*p));
-    p = extraHeaders;
-
-    addBittoCookie(cookie, id);
-    UnpackedHeaders *header = new UnpackedHeaders();
-    ls_str_t method;
-    method.ptr = (char *)"GET";
-    method.len = 3;
-    if (header->set(&method, &uri, &host, extraHeaders) != LS_OK)
-    {
-        delete header;
+        setState(HSS_IO_ERROR);
         return LS_FAIL;
     }
-    return getStream()->push(header);
-
-}
-
-
-int HttpSession::processOneLink(const char *p, const char *pEnd,
-                                AutoStr2 &cookie)
-{
-    p = (const char *)memchr(p, '<', pEnd - p);
-    if (!p)
-        return 0;
-
-    const char *pUrlBegin = p + 1;
-    while(pUrlBegin < pEnd && isspace(*pUrlBegin))
-        ++pUrlBegin;
-    p = (const char *)memchr(pUrlBegin, '>', pEnd - pUrlBegin);
-    if (!p)
-        return 0;
-    const char *pUrlEnd = p++;
-    while(isspace(pUrlEnd[-1]))
-        --pUrlEnd;
-    while(p < pEnd && (isspace(*p) || *p == ';'))
-        ++p;
-
-    const char *p1 = (const char *)memmem(p, pEnd - p, "preload", 7);
-    if (!p1)
-        return 0;
-    p1 = (const char *)memmem(p, pEnd - p, "nopush", 6);
-    if (p1)
-        return 0;
-    return pushToClient(pUrlBegin, pUrlEnd - pUrlBegin, cookie);
-}
-
-//Example:
-// Link: </css/style.css>; rel=preload;
-// Link: </dont/want/to/push/this.css>; rel=preload; as=stylesheet; nopush
-// Link: </css>; as=style; rel=preload, </js>; as=script; rel=preload;
-void HttpSession::processLinkHeader(const char* pValue, int valLen,
-                                    AutoStr2 &cookie)
-{
-    const char *p = pValue;
-    const char *pLineEnd = p + valLen;
-    const char *pEnd;
-
-    while (getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE) && p < pLineEnd)
+    setFlag2(HSF2_EARLY_HINTS_SENT, 1);
+    LS_DBG_L(getLogSession(), "Sent 103 Early Hints with %d links.", count);
+    if (getStream()->flush() == LS_FAIL)
     {
-        pEnd = (const char *)memchr(p, ',', pLineEnd - p);
-        if (!pEnd)
-            pEnd = pLineEnd;
-
-        processOneLink(p, pEnd, cookie);
-        p = pEnd + 1;
+        setState(HSS_IO_ERROR);
+        return LS_FAIL;
     }
-
-}
-
-
-void HttpSession::processServerPush()
-{
-    if (m_request.isCaptchaUrl())
-        return;
-    struct iovec iovs[100];
-    struct iovec *p = iovs, *pEnd;
-    pEnd = p + m_response.getRespHeaders().getHeader(
-        HttpRespHeaders::H_LINK, iovs, 100);
-
-    cookieval_t *cookie0 = m_request.getCookie(SERVERPUSHTAG,
-                                               SERVERPUSHTAGLENGTH);
-    AutoStr2    cookie1;
-    if (cookie0 && cookie0->valLen > 0)
-    {
-        cookie1.setStr(m_request.getHeaderBuf().getp(cookie0->valOff),
-                       cookie0->valLen);
-    }
-
-    while(p < pEnd)
-    {
-        processLinkHeader((const char *)p->iov_base, p->iov_len, cookie1);
-        ++p;
-    }
-
-    if (cookie1.len() > 0)
-    {
-        if (cookie0 && cookie0->valLen > 0 && cookie1.len() == cookie0->valLen
-            && strncasecmp(cookie1.c_str(),
-                           m_request.getHeaderBuf().getp(cookie0->valOff),
-                           cookie0->valLen) ==0)
-        {
-            LS_DBG_L(getLogSession(),
-                     "processServerPush bypassed since no new url bit set.");
-        }
-        else
-        {
-
-            AutoStr2    cookie2(SERVERPUSHTAG, SERVERPUSHTAGLENGTH);
-            cookie2.append("=", 1);
-            cookie2.append(cookie1.c_str(), cookie1.len());
-            m_response.getRespHeaders().add( HttpRespHeaders::H_SET_COOKIE,
-                                             cookie2.c_str(), cookie2.len(),
-                                             LSI_HEADEROP_MERGE);
-        }
-    }
+    return LS_OK;
 }
 
 
@@ -5138,11 +4962,6 @@ int HttpSession::sendRespHeaders()
     if (p)
         ls_mutex_unlock(&p->m_respHeaderLock);
 
-    if (!isNoBody && m_response.getRespHeaders().hasPush()
-        && getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE)
-        && m_request.getUserAgentType() != UA_SAFARI)
-        processServerPush();
-
     if (finalizeHeader(m_request.getVersion(), m_request.getStatusCode()))
     {
         clearFlag(HSF_RESP_HEADER_SENT);
@@ -5153,8 +4972,13 @@ int HttpSession::sendRespHeaders()
     if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_HIGH))
         m_response.getRespHeaders().dump(getLogSession(), 1);
 
-    getStream()->sendRespHeaders(&m_response.getRespHeaders(),
-                                 isNoBody ? SHF_EOS : SHF_NONE);
+    if (getStream()->sendRespHeaders(&m_response.getRespHeaders(),
+                                     isNoBody ? SHF_EOS : SHF_NONE) == LS_FAIL)
+    {
+        clearFlag(HSF_RESP_HEADER_SENT);
+        setState(HSS_IO_ERROR);
+        return 1;
+    }
     setState(HSS_WRITING);
     return 0;
 }
@@ -7015,7 +6839,16 @@ int HttpSession::processMtCancel()
         if (state != 0)
         {
             setProcessState((HSPState)state);
-            smProcessReq();
+            if (state == HSPS_HTTP_ERROR
+                && m_request.isMultipartBodyBlocked())
+            {
+                if (m_pHandler)
+                    cleanUpHandler(HSPS_HTTP_ERROR);
+                if (getStream() && getStream()->getState() < HIOS_SHUTDOWN)
+                    httpError(SC_403);
+            }
+            else
+                smProcessReq();
         }
         return 0;
     }

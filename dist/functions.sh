@@ -979,7 +979,7 @@ installation()
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
 
-    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib modules backup autoupdate tmp cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc lsns lsns/bin lsns/conf
+    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib modules backup autoupdate tmp cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/html.disabled admin/misc lsns lsns/bin lsns/conf
     util_mkdir "$LOGDIR_OWN" "0750" logs admin/logs lsns/logs
     util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates conf/vhosts conf/vhosts/Example admin/conf admin/tmp phpbuild
     util_mkdir "$SDIR_OWN" $SDIR_MOD cgid admin/cgid admin/cgid/secret
@@ -1083,6 +1083,7 @@ installation()
     util_cpdir "$SDIR_OWN" $DOC_MOD admin/html.$VERSION
     rm -rf $LSWS_HOME/admin/html
     ln -sf ./html.$VERSION $LSWS_HOME/admin/html
+    util_cpdir "$SDIR_OWN" $DOC_MOD admin/html.disabled
 
 
     util_cpfile "$SDIR_OWN" $EXEC_MOD bin/updateagent

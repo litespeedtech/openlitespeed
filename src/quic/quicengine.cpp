@@ -346,7 +346,7 @@ void QuicEngine::onConnClosed(lsquic_conn_t *c, lsquic_conn_ctx_t *h)
 // }
 
 static void *createUnpackedHeaders(void *hsi_ctx, lsquic_stream_t *stream,
-                                   int is_push_promise)
+                                   int)
 {
     bool is_qpack = (stream != NULL);
     UnpackedHeaders *hdrs = new UnpackedHeaders();
@@ -362,10 +362,7 @@ static int processUnpackedHeader(void *hdr_set, lsxpack_header_t *hdr)
 
 static void releaseUnpackedHeaders(void *hdr_set)
 {
-    if ((long)hdr_set & 0x1L)
-        delete (UnpackedHeaders *)((long)hdr_set & ~0x1L);
-    else
-        delete (UpkdHdrBuilder *)hdr_set;
+    delete (UpkdHdrBuilder *)hdr_set;
 }
 
 static struct lsxpack_header *
@@ -422,9 +419,6 @@ lsquic_stream_ctx_t *QuicEngine::onNewStream(void *stream_if_ctx,
     pConnInfo->m_remotePort = GSockAddr::getPort(pPeer);
     // pStream->setConnInfo(getStream()->getConnInfo());
     pStream->init(s);
-    if (lsquic_stream_is_pushed(s))
-        pStream->continueRead();
-    else
     {
         void *hdr_set = (UpkdHdrBuilder *)lsquic_stream_get_hset(s);
         if (hdr_set)
@@ -705,6 +699,7 @@ int QuicEngine::init(Multiplexer *pMplx, const char *pShmDir,
         m_config = *settings;
     else
         lsquic_engine_init_settings(&m_config, LSENG_SERVER);
+    m_config.es_support_push = 0;
     m_config.es_max_header_list_size = 64 * 1024;
     m_config.es_rw_once = 1;
     m_config.es_send_prst = 1;

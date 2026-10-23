@@ -59,9 +59,7 @@ class UnpackedHeaders;
 #define HIO_FLAG_WRITE_BUFFER       SS_FLAG_WRITE_BUFFER
 #define HIO_FLAG_BLACK_HOLE         SS_FLAG_BLACK_HOLE
 #define HIO_FLAG_FROM_LOCAL         SS_FLAG_FROM_LOCAL
-#define HIO_FLAG_PUSH_CAPABLE       SS_FLAG_PUSH_CAPABLE
 #define HIO_FLAG_INIT_SESS          SS_FLAG_INIT_SESS
-#define HIO_FLAG_IS_PUSH            SS_FLAG_IS_PUSH
 #define HIO_FLAG_PASS_THROUGH       SS_FLAG_PASS_THROUGH
 #define HIO_FLAG_SENDFILE           SS_FLAG_SENDFILE
 #define HIO_FLAG_FLOWCTRL           SS_FLAG_FLOWCTRL
@@ -79,7 +77,6 @@ class UnpackedHeaders;
 #define HIO_PRIORITY_JS             (HIO_PRIORITY_CSS + 1)
 #define HIO_PRIORITY_IMAGE          (HIO_PRIORITY_JS + 1)
 #define HIO_PRIORITY_DOWNLOAD       (HIO_PRIORITY_IMAGE + 1)
-#define HIO_PRIORITY_PUSH           (HIO_PRIORITY_DOWNLOAD + 1)
 #define HIO_PRIORITY_LARGEFILE      (HIO_PRIORITY_LOWEST)
 
 
@@ -194,9 +191,6 @@ public:
             suspendWrite();
         }
     }
-
-    virtual int push(UnpackedHeaders *hdrs)
-    {   return -1;      }
 
     int onPeerClose()
     {

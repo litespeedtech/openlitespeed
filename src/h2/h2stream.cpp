@@ -156,7 +156,8 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag hdr_flag)
         m_pH2Conn->wantFlush();
     if (ret != LS_FAIL && getFlag(HIO_FLAG_ALTSVC_SENT))
         ((H2Connection *)m_pH2Conn)->getStream()->setFlag(HIO_FLAG_ALTSVC_SENT, 1);
-    setFlag(HIO_FLAG_RESP_HEADER_SENT, 1);
+    if (ret != LS_FAIL && !(hdr_flag & SHF_MORE_HDRS))
+        setFlag(HIO_FLAG_RESP_HEADER_SENT, 1);
     return ret;
 }
 

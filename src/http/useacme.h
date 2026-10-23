@@ -26,12 +26,18 @@
 class AcmeAlias
 {
 public:
-    AcmeAlias()     {}
+    AcmeAlias()
+        : m_optional(false) {}
     ~AcmeAlias()    {}
     const char *getAlias()          {   return m_alias.c_str();     }
     void setAlias(const char *a)    {   m_alias = a;                }
+    /* An optional alias (www.<primary>) is left out of the cert when it can't
+     * be reached instead of failing the whole cert. */
+    void setOptional(bool o)        {   m_optional = o;             }
+    bool getOptional()              {   return m_optional;          }
 private:
     AutoStr2    m_alias;
+    bool        m_optional;
 };
 
 class AcmeAliasMap : public HashStringMap< AcmeAlias * >
@@ -39,7 +45,8 @@ class AcmeAliasMap : public HashStringMap< AcmeAlias * >
 public:
     AcmeAliasMap()  {}
     ~AcmeAliasMap() {   release_objects();  }
-    AcmeAlias *addAlias(const char *primary, const char *alias);
+    AcmeAlias *addAlias(const char *primary, const char *alias,
+                        bool optional = false);
 };
 
 class AcmeCert 
@@ -50,6 +57,7 @@ public:
         , m_force(false)
         , m_wildcard(false)
         , m_vhostOk(false)
+        , m_ifChanged(false)
         , m_pDnsApi(NULL)
         , m_pDnsEnv(NULL)   {}
     ~AcmeCert()     {}
@@ -68,6 +76,9 @@ public:
     bool getWildcard()              {   return m_wildcard;          }
     void setVhostOk(bool ok)        {   m_vhostOk = ok;             }
     bool getVhostOk()               {   return m_vhostOk;           }
+    /* Renew a still valid cert only if the reachable aliases changed. */
+    void setIfChanged(bool c)       {   m_ifChanged = c;            }
+    bool getIfChanged()             {   return m_ifChanged;         }
     void setDnsApi(const char *p)   {   m_pDnsApi = p;              }
     const char *getDnsApi()         {   return m_pDnsApi;           }
     void setDnsEnv(const char *p)   {   m_pDnsEnv = p;              }
@@ -81,6 +92,7 @@ private:
     bool            m_force;
     bool            m_wildcard;
     bool            m_vhostOk;
+    bool            m_ifChanged;
     const char     *m_pDnsApi;
     const char     *m_pDnsEnv;
 };
@@ -111,6 +123,9 @@ private:
     char **getEnv(char **argv);
     struct ifaddrs *isMatch(GSockAddr *sockaddr, void *addr);
     void processCerts(char *acmeDir, char *configDir, bool programStart);
+    int requestCert(char *acmeFile, char *configDir, AcmeCert *cert);
+    int runAcme(char *acmeFile, AcmeCert *cert, const char **aliases,
+                int numAliases);
     int envCount(char *pos);
     void deleteCert(AcmeCert *acmeCert);
     int reportStd(AutoBuf *autobuf, const char *fdname, int fd, 
@@ -164,7 +179,9 @@ public:
     static char *getDomainDirName(char *configDir, const char *domain, char dir[], 
                                   size_t dirlen);
     static FILE *openConfFile(char *configDir, const char *domain, char *confFile);
-    static UseAcme *setupRenew(UseAcme *useAcme, char *confFile, bool force);
+    static bool getAlt(FILE *fp, char *alts, size_t altsLen);
+    static bool writeAlt(const char *confFile, const char *alts);
+    static UseAcme *setupRenew(UseAcme *useAcme, bool force, bool ifChanged);
 private:
     static char *getDomainDirNameOnly(const char *domain, char *dironly, 
                                       size_t dironlylen);
@@ -182,6 +199,9 @@ private:
                                UseAcme **firstUseAcme, UseAcme **useAcmeMap);
     static void failMap(UseAcme **useAcme, AcmeCert **acmeCert, 
                         UseAcme **firstUseAcme, UseAcme **useAcmeMap);
+    static bool isWwwAlias(const char *alias, const char *primary);
+    static void addWwwAlias(AcmeAliasMap *acmeAliasMap, const char *primary,
+                            bool wildcard, const char *pAddr);
 
     AutoStr2        m_domain;
     AutoStr2        m_vhost;
@@ -209,7 +229,8 @@ public:
         :   m_lastRenew(0)  {} 
     ~UseAcmeMap() {}
     void findDeleted();
-    bool deleteFromAcme(char *acmeDir, char *configDir, const char *domain);
+    bool deleteFromAcme(char *acmeDir, char *configDir, const char *domain,
+                        char *domainDir, char *certDir);
     bool deleteDir(char *configDir, char *domainDir);
     void renewCerts();
 private:

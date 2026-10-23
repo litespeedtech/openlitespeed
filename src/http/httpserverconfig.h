@@ -84,6 +84,7 @@ private:
 
     int8_t          m_iCheckDeniedSymLink;
     int8_t          m_iEnableMultiCerts;
+    int8_t          m_iEarlyHints;
 
     int32_t         m_iMaxFcgiInstances;
 
@@ -121,6 +122,10 @@ private:
     HttpServerConfig();
 public:
     ~HttpServerConfig();
+
+    //0: disabled, 1: HTTP/2 and HTTP/3, 2: also HTTP/1.1.
+    void setEarlyHints(int mode)           {   m_iEarlyHints = mode;      }
+    int getEarlyHints() const              {   return m_iEarlyHints;      }
 
     void setConnTimeOut(int32_t timeout)    {   m_iConnTimeout = timeout;   }
     int32_t getConnTimeout() const          {   return m_iConnTimeout;      }

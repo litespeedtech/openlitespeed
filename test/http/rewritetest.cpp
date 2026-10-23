@@ -18,11 +18,19 @@
 #ifdef RUN_TEST
 
 #include "rewritetest.h"
+#include <http/rewriteengine.h>
 #include <http/rewriterule.h>
+#include <http/rewriterulelist.h>
 #include <http/rewritemap.h>
 #include <http/httpheader.h>
 #include <http/httpstatuscode.h>
 #include "unittest-cpp/UnitTest++.h"
+
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 
 
@@ -202,5 +210,56 @@ TEST(RewriteTest_testParse)
     testParseSubst();
     testParseCond();
     testParseRule();
+}
+
+
+TEST(RewriteTest_loadRewriteFileRejectsNonRegularFiles)
+{
+    char testDir[] = "/tmp/ols-rewrite-file-XXXXXX";
+    if (!mkdtemp(testDir))
+    {
+        CHECK(false);
+        return;
+    }
+
+    char regularPath[512];
+    char symlinkPath[512];
+    char fifoPath[512];
+    snprintf(regularPath, sizeof(regularPath), "%s/rules.conf", testDir);
+    snprintf(symlinkPath, sizeof(symlinkPath), "%s/rules.link", testDir);
+    snprintf(fifoPath, sizeof(fifoPath), "%s/rules.fifo", testDir);
+
+    int fd = open(regularPath, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    CHECK(fd != -1);
+    if (fd != -1)
+    {
+        const char rule[] = "RewriteRule ^old$ /new [L]\n";
+        CHECK(write(fd, rule, sizeof(rule) - 1) == (ssize_t)sizeof(rule) - 1);
+        close(fd);
+    }
+
+    RewriteRuleList regularRules;
+    CHECK_EQUAL(0, RewriteEngine::loadRewriteFile(regularPath, &regularRules,
+                                                  NULL, NULL));
+
+    CHECK_EQUAL(0, symlink("rules.conf", symlinkPath));
+    RewriteRuleList symlinkRules;
+    CHECK_EQUAL(0, RewriteEngine::loadRewriteFile(symlinkPath, &symlinkRules,
+                                                  NULL, NULL));
+
+    CHECK_EQUAL(0, mkfifo(fifoPath, 0600));
+    RewriteRuleList fifoRules;
+    CHECK_EQUAL(LS_FAIL, RewriteEngine::loadRewriteFile(fifoPath, &fifoRules,
+                                                        NULL, NULL));
+
+    RewriteRuleList directoryRules;
+    CHECK_EQUAL(LS_FAIL, RewriteEngine::loadRewriteFile(testDir,
+                                                        &directoryRules,
+                                                        NULL, NULL));
+
+    unlink(fifoPath);
+    unlink(symlinkPath);
+    unlink(regularPath);
+    rmdir(testDir);
 }
 #endif

@@ -1067,7 +1067,6 @@ int getPrivateCacheCookie(HttpReq *pReq, char *pDest, char *pDestEnd)
         else if ((strncmp("has_js=", pCookie, 7) == 0)
                  || (strncmp("_lscache_vary", pCookie, 13) == 0)
                  || (strncmp("wordpress_test_cookie", pCookie, 21) == 0)
-                 || (strncmp("ls_smartpush", pCookie, 12) == 0)
                  || (strncmp("bb_forum_view=", pCookie, 14) == 0))
             skip = 1;
         else if (strncmp("frontend=", pCookie, 9) == 0)
@@ -2852,7 +2851,7 @@ static int sessionBegin(lsi_param_t *rec)
 static int checkAssignHandler(lsi_param_t *rec)
 {
     char val[3] = {0};
-    if (g_api->get_req_env(rec->session, "modcache", 8, val, 1) > 0
+    if (g_api->get_req_env(rec->session, "modcache", 8, val, sizeof(val)) > 0
         && *val == '0')
     {
         int aHkpts[] = {LSI_HKPT_URI_MAP, LSI_HKPT_HTTP_END,

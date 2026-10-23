@@ -164,10 +164,12 @@ public:
     const char *getAddrString() const   {   return m_sAddr.c_str();     }
     int         getAddrStrLen() const   {   return m_sAddr.len();       }
 
-    void setHostName(const char *p)
+    void setHostName(const char *p, int len)
     {
-        if (p) m_sHostName.setStr(p);
-        else     m_sHostName.setStr("", 0);
+        if (p && len > 0)
+            m_sHostName.setStr(p, len);
+        else
+            m_sHostName.setStr("", 0);
     }
     const char *getHostName() const     {   return m_sHostName.c_str(); }
     int getHostNameLen() const          {   return m_sHostName.len();   }

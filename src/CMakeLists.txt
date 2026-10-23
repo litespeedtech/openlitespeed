@@ -48,6 +48,7 @@ SET(unittest_STAT_SRCS
    ../test/http/statusurlmaptest.cpp
    ../test/http/contexttreetest.cpp
    ../test/http/httpmimetest.cpp
+   ../test/http/multipartbodyguardtest.cpp
    ../test/http/httpcgitooltest.cpp
    ../test/http/chunkostest.cpp
    ../test/http/chunkistest.cpp

@@ -175,6 +175,7 @@ enum HSPState
 //Start flag2
 #define HSF2_IS_HTTP2               (1<<0)
 #define HSF2_IS_HTTP3               (1<<1)
+#define HSF2_EARLY_HINTS_SENT        (1<<2)
 #define HSF2_EXEC_EXT_CMD           (1<<9)
 #define HSF2_EXEC_POPEN             (1<<10)
 
@@ -405,12 +406,6 @@ public:
 
     void extCmdDone();
 
-    void addBittoCookie(AutoStr2 &cookie, int bit);
-    int isCookieHaveBit(const char *cookies, int bit);
-
-    int pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie);
-    void processLinkHeader(const char* pValue, int valLen, AutoStr2 &cookie);
-
     static int hookResumeCallback(lsi_session_t *session, long lParam, void *);
     static int removeSessionCbsEvent(lsi_session_t *session, long lParam,
                                 void *pParam);
@@ -504,7 +499,6 @@ private:
     int includeSubSession();
     int curSubSessionCleanUp();
 
-    int processOneLink(const char* p, const char* pEnd, AutoStr2 &cookie);
     int restartHandlerProcess();
     int restartHandlerProcessEx();
     int runFilter(int hookLevel, filter_term_fn pfTerm,
@@ -526,7 +520,6 @@ private:
     int processNewUri();
 
     void resetEvtcb();
-    void processServerPush();
 
     int execExtCmdEx();
     int processUnpackedHeaders();
@@ -683,6 +676,8 @@ public:
 
     int createOverBodyLimitErrorPage();
     int respHeaderDone();
+    bool earlyHintsEnabled() const;
+    int sendEarlyHints(HttpRespHeaders &headers);
 
     bool isHttp2() const            {   return m_iFlag2 & HSF2_IS_HTTP2;    }
     bool isHttp3() const            {   return m_iFlag2 & HSF2_IS_HTTP3;    }

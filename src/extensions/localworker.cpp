@@ -1108,6 +1108,8 @@ TRY_AGAIN:
 
 
     pid = workerExec(config, fd);
+    // SCM_RIGHTS gives lscgid its own descriptor; do not retain the listener.
+    close(fd);
     if (pid != 0)
     {
         ret = processPid(pid, service_addr.getUnix());

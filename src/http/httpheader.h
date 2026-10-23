@@ -226,6 +226,7 @@ public:
         : m_buf(sizeof(HeaderOp) * 1)
         , m_has_req_op(0)
         , m_has_resp_op(0)
+        , m_hasLinkOp(0)
     {}
     ~HttpHeaderOps()
     {
@@ -255,11 +256,13 @@ public:
     int parseOp(const char *pLineBegin, const char *pCurEnd, int is_req);
     short has_req_op() const    {   return m_has_req_op;    }
     short has_resp_op() const   {   return m_has_resp_op;   }
+    bool hasLinkOp() const      {   return m_hasLinkOp;    }
 
 private:
     AutoBuf m_buf;
     short   m_has_req_op;
     short   m_has_resp_op;
+    short   m_hasLinkOp;
 };
 
 #endif

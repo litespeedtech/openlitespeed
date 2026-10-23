@@ -129,6 +129,7 @@ public:
     int  processRespBodyData(const char *pBuf, int len);
 
     int  respHeaderDone();
+    int  respHeaderError(int ret);
 
     bool isRecoverable();
     int  tryRecover();

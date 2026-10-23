@@ -61,6 +61,7 @@
 #include <http/httplistenerlist.h>
 #include <http/httplog.h>
 #include <http/httpmime.h>
+#include <http/multipartbodyguard.h>
 #include <http/httpresourcemanager.h>
 #include <http/httprespheaders.h>
 #include <http/httpserverconfig.h>
@@ -245,6 +246,7 @@ private:
     gid_t               m_pri_gid;
     HttpFetch          *m_pAutoUpdFetch[3];
     QuicEngine         *m_pQuicEngine;
+    int                 m_iWebAdminEnabled;
 
     HttpServerImpl(const HttpServerImpl &rhs);
     void operator=(const HttpServerImpl &rhs);
@@ -254,6 +256,7 @@ private:
         : m_sSwapDirectory(DEFAULT_SWAP_DIR)
         , m_pri_gid(0)
         , m_pQuicEngine(NULL)
+        , m_iWebAdminEnabled(0)
     {
         ClientCache::initObjPool();
         ExtAppRegistry::init();
@@ -399,8 +402,10 @@ private:
     void mapDomainList(const XmlNode *pListenerNodes, HttpVHost *pVHost);
     int enableWebConsole();
     void setAdminThrottleLimits(HttpVHost *pVHostAdmin);
-    HttpVHost *createAdminVhost(LocalWorker *pFcgiApp, int iChrootLen,
-                                char *pchPHPBin, size_t phpBinLen);
+    int loadWebAdminAcl(AutoStr2 &sAcl);
+    HttpVHost *createAdminVhost(LocalWorker *pFcgiApp, const char *pAcl,
+                                int iChrootLen, char *pchPHPBin,
+                                size_t phpBinLen);
     LocalWorker *createAdminPhpApp(const char *pChroot, int iChrootLen,
                                    const char *pURI, char *pchPHPBin,
                                    size_t szPhpBin);
@@ -1212,7 +1217,11 @@ void HttpServerImpl::endConfig(int error)
     m_oldListeners.saveInUseListnersTo(m_toBeReleasedListeners);
     m_orgVHosts.appendTo(m_toBeReleasedVHosts);
     m_listeners.endConfig();
-    AcmeCertMap::getInstance().beginCerts(true);
+    // beginCerts() revokes and deletes every certificate no vhost claims, and a
+    // failed read leaves the ACME map holding only the vhosts it reached: run it
+    // on a failed configuration and every later domain's certificate goes.
+    if (!error)
+        AcmeCertMap::getInstance().beginCerts(true);
     ServerAddrRegistry::getInstance().init(&m_listeners);
 }
 
@@ -2311,6 +2320,8 @@ int HttpServerImpl::startListeners(const XmlNode *pRoot)
 #define DEFAULT_ADMIN_PHP_FCGI      "$VH_ROOT/fcgi-bin/admin_php"
 #define DEFAULT_ADMIN_PHP_FCGI_URI  "UDS:/" DEFAULT_TMP_DIR "/admin_php.sock"
 #define ADMIN_PHP_SESSION           "$SERVER_ROOT/admin/tmp"
+#define WEBADMIN_ENABLE_FILE        "$SERVER_ROOT/admin/conf/enable_webadmin"
+#define WEBADMIN_DISABLED_HTML      "html.disabled/"
 
 
 int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
@@ -2319,26 +2330,42 @@ int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
     int iChrootLen = MainServerConfig::getInstance().getChrootlen();
     char achPHPBin[MAX_PATH_LEN];
     ConfigCtx currentCtx("admin");
+    LocalWorker *pFcgiApp = NULL;
+    AutoStr2 sAcl;
 
-    if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achPHPBin,
-            DEFAULT_ADMIN_PHP_FCGI) ||
-        (access(achPHPBin, X_OK) != 0))
-    {
-        LS_ERROR(&currentCtx, "missing PHP binary for admin server - %s!",
-                 achPHPBin);
-        return LS_FAIL;
-    }
-
-    const char *pURI = configAdminPhpUri(pNode);
-    if (pURI == NULL)
-        return LS_FAIL;
-    LocalWorker *pFcgiApp = createAdminPhpApp(pChroot, iChrootLen, pURI,
-                            achPHPBin, sizeof(achPHPBin));
+    // The admin vhost survives an in-process reconfig, so the enable file is
+    // only checked when the vhost is created; a restart re-evaluates it.
     HttpVHost *pVHostAdmin = getVHost(DEFAULT_ADMIN_SERVER_NAME);
     if (!pVHostAdmin)
+        m_iWebAdminEnabled = loadWebAdminAcl(sAcl);
+
+    if (m_iWebAdminEnabled)
     {
-        if ((pVHostAdmin = createAdminVhost(pFcgiApp, iChrootLen,
-                                            achPHPBin, sizeof(achPHPBin))) == NULL)
+        if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achPHPBin,
+                DEFAULT_ADMIN_PHP_FCGI) ||
+            (access(achPHPBin, X_OK) != 0))
+        {
+            LS_ERROR(&currentCtx, "missing PHP binary for admin server - %s!",
+                     achPHPBin);
+            return LS_FAIL;
+        }
+
+        const char *pURI = configAdminPhpUri(pNode);
+        if (pURI == NULL)
+            return LS_FAIL;
+        pFcgiApp = createAdminPhpApp(pChroot, iChrootLen, pURI,
+                                     achPHPBin, sizeof(achPHPBin));
+    }
+    else
+        LS_NOTICE(&currentCtx, "WebAdmin console is disabled by default, "
+                  "create file %s and restart server to enable it.",
+                  WEBADMIN_ENABLE_FILE);
+
+    if (!pVHostAdmin)
+    {
+        if ((pVHostAdmin = createAdminVhost(pFcgiApp, sAcl.c_str(),
+                                            iChrootLen, achPHPBin,
+                                            sizeof(achPHPBin))) == NULL)
             return LS_FAIL;
     }
     setAdminThrottleLimits(pVHostAdmin);
@@ -2351,12 +2378,16 @@ int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
     if (!enableWebConsole())
         return 0;
 
-    char achRules[] =
-        "RewriteCond %{REQUEST_URI} !^/(index|login)\\.php$\n"
-        "RewriteCond %{REQUEST_URI} !^/view/(serviceMgr|confMgr|ajax_data|dashboard|logviewer|compilePHP|realtimestats)\\.php$\n"
-        "RewriteRule \\.php - [F]\n";
-    pVHostAdmin->getRootContext().configRewriteRule(NULL, achRules, NULL);
-    pVHostAdmin->getRootContext().enableRewrite(1);
+    // A disabled console serves only static files, so it needs no rules.
+    if (m_iWebAdminEnabled)
+    {
+        char achRules[] =
+            "RewriteCond %{REQUEST_URI} !^/(index|login)\\.php$\n"
+            "RewriteCond %{REQUEST_URI} !^/view/(serviceMgr|confMgr|ajax_data|dashboard|logviewer|compilePHP|realtimestats)\\.php$\n"
+            "RewriteRule \\.php - [F]\n";
+        pVHostAdmin->getRootContext().configRewriteRule(NULL, achRules, NULL);
+        pVHostAdmin->getRootContext().enableRewrite(1);
+    }
 
     mapDomainList(pNode, pVHostAdmin);
     return 0;
@@ -2538,7 +2569,82 @@ LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
 }
 
 
+/**
+ * WebAdmin is disabled unless WEBADMIN_ENABLE_FILE exists. The file may list
+ * the IPs or subnets allowed to access WebAdmin, separated by whitespace or
+ * commas; text after '#' to the end of the line is a comment. Returns 1 when
+ * WebAdmin is enabled, with sAcl holding the allowed list (empty for no
+ * extra restriction), 0 otherwise.
+ */
+int HttpServerImpl::loadWebAdminAcl(AutoStr2 &sAcl)
+{
+    char achFile[MAX_PATH_LEN];
+    char achBuf[4096];
+    int fd;
+    ssize_t len;
+
+    if ((ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achFile,
+            WEBADMIN_ENABLE_FILE) != 0) ||
+        (access(achFile, F_OK) != 0))
+        return 0;
+
+    fd = open(achFile, O_RDONLY);
+    if (fd == -1)
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "failed to read %s: %s, "
+                 "keep WebAdmin disabled.", achFile, strerror(errno));
+        return 0;
+    }
+    len = read(fd, achBuf, sizeof(achBuf));
+    close(fd);
+    // Refuse a truncated read rather than allow a cut-off address.
+    if ((len < 0) || (len >= (ssize_t)sizeof(achBuf)))
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "failed to read %s, or file "
+                 "is larger than %d bytes, keep WebAdmin disabled.", achFile,
+                 (int)sizeof(achBuf) - 1);
+        return 0;
+    }
+
+    char *p = achBuf;
+    char *pEnd = achBuf + len;
+    int hasEntry = 0;
+    while (p < pEnd)
+    {
+        if (*p == '#')
+        {
+            while ((p < pEnd) && (*p != '\n'))
+                *p++ = ' ';
+            continue;
+        }
+        if ((*p == '\t') || (*p == '\0'))
+            *p = ' ';
+        else if (!isspace((unsigned char)*p) && (*p != ','))
+            hasEntry = 1;
+        ++p;
+    }
+    *pEnd = 0;
+    if (hasEntry)
+        sAcl.setStr(achBuf, len);
+    LS_NOTICE(ConfigCtx::getCurConfigCtx(), "WebAdmin console is enabled by "
+              "%s%s.", achFile, hasEntry ? " with IP access control" : "");
+    return 1;
+}
+
+
+static void setWebAdminAcl(HttpContext *pContext, const char *pList)
+{
+    AccessControl *pAcl = new AccessControl();
+    pAcl->addList("ALL", 0);
+    if (pAcl->addList(pList, 1) == 0)
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "no valid IP address in "
+                 "%s, deny all access to WebAdmin.", WEBADMIN_ENABLE_FILE);
+    pContext->setAccessControl(pAcl);
+}
+
+
 HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
+        const char *pAcl,
         int iChrootLen,
         char *pchPHPBin,
         size_t phpBinLen)
@@ -2561,10 +2667,11 @@ HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
         return NULL;
     }
 
-    pFcgiApp->getConfig().setVHost(pVHostAdmin);
-
+    // Without the PHP app, WebAdmin is disabled: the document root holds
+    // only the static notice page, and scripts are disabled.
     snprintf(pchPHPBin, phpBinLen, "%s%s",
-             ConfigCtx::getCurConfigCtx()->getVhRoot(), "html/");
+             ConfigCtx::getCurConfigCtx()->getVhRoot(),
+             pFcgiApp ? "html/" : WEBADMIN_DISABLED_HTML);
     pVHostAdmin->setDocRoot(pchPHPBin);
     ConfigCtx::getCurConfigCtx()->setDocRoot(pchPHPBin);
     pVHostAdmin->addContext("/", HandlerType::HT_NULL, pchPHPBin, NULL, 1);
@@ -2575,18 +2682,31 @@ HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
                          HandlerType::HT_NULL, &achRootPath[iChrootLen], NULL, 1);
 //     pVHostAdmin->addContext(pDocs);
     pDocs = &pVHostAdmin->getRootContext();
-    pDocs->addDirIndexes("index.html, index.php");
-    char achPHPSuffix[10] = "php";
-    setPHPHandler(pDocs, pFcgiApp, achPHPSuffix);
+    if (pFcgiApp)
+    {
+        pFcgiApp->getConfig().setVHost(pVHostAdmin);
 
-    char achMIME[] = "text/html";
-    lstrncpy(achPHPSuffix, "html", sizeof(achPHPSuffix));
-    pDocs->getMIME()->addMimeHandler(achPHPSuffix, achMIME,
-                                     HandlerFactory::getInstance(HandlerType::HT_NULL, NULL), NULL,
-                                     TmpLogId::getLogId());
+        pDocs->addDirIndexes("index.html, index.php");
+        char achPHPSuffix[10] = "php";
+        setPHPHandler(pDocs, pFcgiApp, achPHPSuffix);
 
+        char achMIME[] = "text/html";
+        lstrncpy(achPHPSuffix, "html", sizeof(achPHPSuffix));
+        pDocs->getMIME()->addMimeHandler(achPHPSuffix, achMIME,
+                                         HandlerFactory::getInstance(HandlerType::HT_NULL, NULL), NULL,
+                                         TmpLogId::getLogId());
+        // Set on the root context before contextInherit() so that every
+        // admin context shares it.
+        if (pAcl && *pAcl)
+            setWebAdminAcl(pDocs, pAcl);
+        pVHostAdmin->enableScript(1);
+    }
+    else
+    {
+        pDocs->addDirIndexes("index.html");
+        pVHostAdmin->enableScript(0);
+    }
 
-    pVHostAdmin->enableScript(1);
     pVHostAdmin->followSymLink(2);
     pVHostAdmin->restrained(1);
     pVHostAdmin->getExpires().enable(1);
@@ -2796,6 +2916,12 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 
     int val = currentCtx.getLongValue(pNode, "useSendfile", 0, 1, 0);
     config.setUseSendfile(val);
+
+    MultipartBodyGuard::setBlockEnabled(
+        currentCtx.getLongValue(pNode, "blockUploadProgressNul", 0, 1, 0));
+    MultipartBodyGuard::setScanLimit(currentCtx.getLongValue(
+        pNode, "uploadProgressNulScanLimit", 0, MAX_REQ_BODY_LEN,
+        MultipartBodyGuard::DEFAULT_SCAN_LIMIT));
 
     int maxAio = HttpServerConfig::AIO_POSIX;
 #if IOURING
@@ -3851,14 +3977,22 @@ void HttpServerImpl::verifyStatDir(const char *path)
                 if (rootuser)
                 {
                     chown(path, pw->pw_uid, pw->pw_gid);
+                    // Hand over only entries left by the previous owner;
+                    // root-owned files (e.g. lshttpd.pid when statDir is
+                    // DEFAULT_TMP_DIR) and planted hard links must keep
+                    // their ownership.
                     DIR *dir = opendir(path);
                     if (dir)
                     {
                         struct dirent *entry;
+                        struct stat st;
                         while ((entry = readdir(dir)) != NULL)
                         {
                             if (strcmp(entry->d_name, ".") != 0
-                                && strcmp(entry->d_name, "..") != 0)
+                                && strcmp(entry->d_name, "..") != 0
+                                && fstatat(dirfd(dir), entry->d_name, &st,
+                                           AT_SYMLINK_NOFOLLOW) == 0
+                                && st.st_uid == sb.st_uid)
                                 fchownat(dirfd(dir), entry->d_name,
                                          pw->pw_uid, pw->pw_gid,
                                          AT_SYMLINK_NOFOLLOW);
@@ -4891,6 +5025,9 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         if (pList && pList->size() > 0)
             HttpMime::configScriptHandler(pList, NULL, NULL);
     }
+
+    HttpServerConfig::getInstance().setEarlyHints(
+        ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableEarlyHints", 0, 2, 1));
 
     int val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableIpGeo", -1, 1, -1);
     configIpToGeo(pRoot);

@@ -33,10 +33,25 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
+#include <netdb.h>
+#include <openssl/rand.h>
+#include <poll.h>
 #include <pwd.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
+
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
+/* Cert child exit code: a conditional renewal had nothing to change */
+#define ACME_CERT_UNCHANGED     2
+#define ACME_PROBE_TIMEOUT_MS   10000
+#define ACME_CHALLENGE_PREFIX   "/.well-known/acme-challenge/"
 
 LS_SINGLETON(AcmeCertMap);
 LS_SINGLETON(UseAcmeMap);
@@ -44,10 +59,12 @@ LS_SINGLETON(AcmeVHostMap);
 
 char *UseAcme::s_server = NULL;
 
-AcmeAlias *AcmeAliasMap::addAlias(const char *primary, const char *alias)
+AcmeAlias *AcmeAliasMap::addAlias(const char *primary, const char *alias,
+                                  bool optional)
 {
     class AcmeAliasMap::iterator it;
-    LS_DBG("[ACME] addAlias: %s to %s\n", alias, primary);
+    LS_DBG("[ACME] addAlias: %s to %s%s\n", alias, primary,
+           optional ? " (optional)" : "");
     if ((it = find(alias)) != end())
         return it.second();
     const char *wildcard = strchr(alias, '*');
@@ -77,6 +94,7 @@ AcmeAlias *AcmeAliasMap::addAlias(const char *primary, const char *alias)
         return NULL;
     }
     acmeAlias->setAlias(alias);
+    acmeAlias->setOptional(optional);
     insert(acmeAlias->getAlias(), acmeAlias);
     return acmeAlias;
 }
@@ -543,6 +561,346 @@ int AcmeCertMap::acmeRequest(char *acmeFile, char *desc, char * const *argv,
 }
 
 
+static long probe_now_ms()
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000L + ts.tv_nsec / 1000000;
+}
+
+
+/* Returns 0 once fd is ready for events, -1 on error or at the deadline. */
+static int probe_wait(int fd, short events, long deadline)
+{
+    struct pollfd pfd;
+    pfd.fd = fd;
+    pfd.events = events;
+    long ms;
+    while ((ms = deadline - probe_now_ms()) > 0)
+    {
+        pfd.revents = 0;
+        int rc = poll(&pfd, 1, (int)ms);
+        if (rc > 0)
+            return 0;
+        if (rc == -1 && errno != EINTR)
+            return -1;
+    }
+    errno = ETIMEDOUT;
+    return -1;
+}
+
+
+/* mod_acme replies "200" with a "<token>.<thumbprint>" body. */
+static bool probe_matches(const char *resp, const char *token)
+{
+    if (strlen(resp) < 12 || strncmp(resp, "HTTP/1.", 7)
+        || strncmp(&resp[8], " 200", 4))
+        return false;
+    const char *body = strstr(resp, "\r\n\r\n");
+    if (!body)
+        return false;
+    body += 4;
+    size_t tokenLen = strlen(token);
+    return !strncmp(body, token, tokenLen) && body[tokenLen] == '.'
+           && body[tokenLen + 1];
+}
+
+
+/* Returns 1 if mod_acme answered, 0 if something else answered and -1 if
+ * nothing answered, so the next address should be tried. */
+static int probe_addr(const struct addrinfo *ai, const char *alias,
+                      const char *token)
+{
+    char req[MAX_PATH_LEN], resp[4096];
+    int reqLen = snprintf(req, sizeof(req),
+                          "GET " ACME_CHALLENGE_PREFIX "%s HTTP/1.0\r\n"
+                          "Host: %s\r\n"
+                          "User-Agent: OpenLiteSpeed ACME probe\r\n"
+                          "Connection: close\r\n\r\n", token, alias);
+    if (reqLen < 0 || reqLen >= (int)sizeof(req))
+        return 0;
+    int fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+    if (fd == -1)
+    {
+        LS_DBG("[ACME] Probe socket failed: %s\n", strerror(errno));
+        return -1;
+    }
+    fd_set_blocking(fd, 0);
+    long deadline = probe_now_ms() + ACME_PROBE_TIMEOUT_MS;
+    int err = 0;
+    socklen_t errLen = sizeof(err);
+    if ((connect(fd, ai->ai_addr, ai->ai_addrlen) == -1 && errno != EINPROGRESS)
+        || probe_wait(fd, POLLOUT, deadline)
+        || getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errLen) || err)
+    {
+        LS_DBG("[ACME] Probe connect failed: %s\n",
+               strerror(err ? err : errno));
+        close(fd);
+        return -1;
+    }
+    const char *p = req, *pEnd = req + reqLen;
+    while (p < pEnd)
+    {
+        ssize_t sz = send(fd, p, pEnd - p, MSG_NOSIGNAL);
+        if (sz > 0)
+            p += sz;
+        else if (sz == -1 && errno == EINTR)
+            continue;
+        else if (sz == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)
+                 && !probe_wait(fd, POLLOUT, deadline))
+            continue;
+        else
+            break;
+    }
+    char *r = resp, *rEnd = resp + sizeof(resp) - 1;
+    while (p == pEnd && r < rEnd)
+    {
+        ssize_t sz = recv(fd, r, rEnd - r, 0);
+        if (sz > 0)
+            r += sz;
+        else if (sz == 0)
+            break;
+        else if (errno == EINTR)
+            continue;
+        else if ((errno == EAGAIN || errno == EWOULDBLOCK)
+                 && !probe_wait(fd, POLLIN, deadline))
+            continue;
+        else
+            break;
+    }
+    close(fd);
+    *r = 0;
+    if (r == resp)
+    {
+        LS_DBG("[ACME] Probe received no reply\n");
+        return -1;
+    }
+    if (probe_matches(resp, token))
+        return 1;
+    LS_DBG("[ACME] Probe reply did not come from mod_acme: %.*s\n",
+           (int)strcspn(resp, "\r\n"), resp);
+    return 0;
+}
+
+
+/* Checks alias the way an HTTP-01 validation would: port 80, the challenge
+ * path, and mod_acme's reply.  Addresses are tried in getaddrinfo() order and
+ * the next one is only used when nothing answers, like Let's Encrypt does. */
+static bool probe_alias(const char *alias)
+{
+    static const char hex[] = "0123456789abcdef";
+    unsigned char rnd[16];
+    char token[sizeof(rnd) * 2 + 1], *t = token;
+    if (RAND_bytes(rnd, sizeof(rnd)) != 1)
+    {
+        LS_ERROR("[ACME] Unable to generate a probe token for %s\n", alias);
+        return false;
+    }
+    for (const unsigned char *pr = rnd, *prEnd = rnd + sizeof(rnd);
+         pr < prEnd; ++pr)
+    {
+        *t++ = hex[*pr >> 4];
+        *t++ = hex[*pr & 0xf];
+    }
+    *t = 0;
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_ADDRCONFIG;
+    int rc = getaddrinfo(alias, "80", &hints, &res);
+    if (rc)
+    {
+        LS_NOTICE("[ACME] Unable to resolve %s to probe it: %s\n", alias,
+                  gai_strerror(rc));
+        return false;
+    }
+    int result = -1;
+    for (struct addrinfo *ai = res; ai && result == -1; ai = ai->ai_next)
+    {
+        GSockAddr sockAddr(ai->ai_addr);
+        LS_DBG("[ACME] Probe %s at %s\n", alias, sockAddr.toString());
+        result = probe_addr(ai, alias, token);
+    }
+    freeaddrinfo(res);
+    return result == 1;
+}
+
+
+/* Joins aliases into a Le_Alt value, "no" when there are none. */
+static bool build_alts(const char **aliases, int numAliases, char *alts,
+                       size_t altsLen)
+{
+    if (!numAliases)
+        return snprintf(alts, altsLen, "no") < (int)altsLen;
+    char *pos = alts, *altsEnd = alts + altsLen;
+    for (const char **alias = aliases, **aliasEnd = aliases + numAliases;
+         alias < aliasEnd; ++alias)
+    {
+        size_t len = strlen(*alias);
+        if (pos + len + 2 > altsEnd)
+            return false;
+        if (pos != alts)
+            *pos++ = ',';
+        memcpy(pos, *alias, len);
+        pos += len;
+    }
+    *pos = 0;
+    return true;
+}
+
+
+/* Returns true if every entry of the Le_Alt value alts is also in other. */
+static bool alts_subset(const char *alts, const char *other)
+{
+    const char *p = alts, *altsEnd = alts + strlen(alts);
+    const char *otherEnd = other + strlen(other);
+    while (p < altsEnd)
+    {
+        const char *comma = (const char *)memchr(p, ',', altsEnd - p);
+        const char *entryEnd = comma ? comma : altsEnd;
+        size_t len = entryEnd - p;
+        bool found = !len;
+        const char *o = other;
+        while (!found && o < otherEnd)
+        {
+            const char *oComma = (const char *)memchr(o, ',', otherEnd - o);
+            const char *oEnd = oComma ? oComma : otherEnd;
+            found = ((size_t)(oEnd - o) == len && !strncasecmp(o, p, len));
+            o = oEnd + 1;
+        }
+        if (!found)
+            return false;
+        p = entryEnd + 1;
+    }
+    return true;
+}
+
+
+/* Compares two Le_Alt values as sets, ignoring order and case. */
+static bool same_alts(const char *alts1, const char *alts2)
+{
+    if (!strcmp(alts1, "no"))
+        alts1 = "";
+    if (!strcmp(alts2, "no"))
+        alts2 = "";
+    return alts_subset(alts1, alts2) && alts_subset(alts2, alts1);
+}
+
+
+int AcmeCertMap::runAcme(char *acmeFile, AcmeCert *cert, const char **aliases,
+                         int numAliases)
+{
+    const char *argv[12 + 2 * numAliases];
+    argv[0] = acmeFile;
+    argv[1] = cert->getRenew() ? "--renew" : "--issue";
+    argv[2] = "-d";
+    argv[3] = cert->getDomain();
+    int index = 4;
+    if (cert->getWildcard())
+    {
+        argv[index++] = "--dns";
+        argv[index++] = cert->getDnsApi();
+    }
+    else
+    {
+        argv[index++] = "--stateless";
+    }
+    for (const char **alias = aliases, **aliasEnd = aliases + numAliases;
+         alias < aliasEnd; ++alias)
+    {
+        argv[index++] = "-d";
+        argv[index++] = *alias;
+    }
+    if (cert->getRenew() && cert->getForce())
+        argv[index++] = "--force";
+    argv[index++] = "--server";
+    argv[index++] = UseAcme::getServer();
+    if ( log4cxx::Level::isEnabled( log4cxx::Level::DEBUG ) )
+        argv[index++] = "--debug";
+    argv[index] = NULL;
+    char desc[MAX_PATH_LEN];
+    snprintf(desc, sizeof(desc), "%s certificate for %s",
+             cert->getRenew() ? "Renew" : "Create", cert->getDomain());
+    return acmeRequest(acmeFile, desc, (char *const*)argv, cert->getDnsEnv());
+}
+
+
+/* Runs in the per-cert child, after the listeners are up, so optional aliases
+ * can be probed.  Returns 0 on success, ACME_CERT_UNCHANGED when a conditional
+ * renewal has nothing to add, or 1 on failure. */
+int AcmeCertMap::requestCert(char *acmeFile, char *configDir, AcmeCert *cert)
+{
+    AcmeAliasMap *aliasMap = cert->getAcmeAliasMap();
+    const char *aliases[aliasMap->size() + 1];
+    int numAliases = 0, numOptional = 0;
+    // Required aliases go first so the optional ones can be dropped off the end.
+    for (AcmeAliasMap::iterator it = aliasMap->begin(); it != aliasMap->end();
+         it = aliasMap->next(it))
+    {
+        if (!it.second()->getOptional() || cert->getWildcard())
+            aliases[numAliases++] = it.first();
+    }
+    for (AcmeAliasMap::iterator it = aliasMap->begin();
+         !cert->getWildcard() && it != aliasMap->end(); it = aliasMap->next(it))
+    {
+        if (!it.second()->getOptional())
+            continue;
+        if (probe_alias(it.first()))
+        {
+            LS_NOTICE("[ACME] Optional domain %s is reachable, it will be included in the cert for %s\n",
+                      it.first(), cert->getDomain());
+            aliases[numAliases++] = it.first();
+            numOptional++;
+        }
+        else
+            LS_NOTICE("[ACME] Optional domain %s is not reachable, it will be left out of the cert for %s\n",
+                      it.first(), cert->getDomain());
+    }
+    // acme.sh --renew takes the aliases from Le_Alt and ignores -d.
+    char confFile[MAX_PATH_LEN], alts[MAX_PATH_LEN], newAlts[MAX_PATH_LEN];
+    if (cert->getRenew())
+    {
+        FILE *fp = UseAcme::openConfFile(configDir, cert->getDomain(), confFile);
+        if (!fp)
+            return 1;
+        if (!UseAcme::getAlt(fp, alts, sizeof(alts)))
+            alts[0] = 0;
+        fclose(fp);
+        if (!build_alts(aliases, numAliases, newAlts, sizeof(newAlts)))
+        {
+            LS_ERROR("[ACME] Exceeded string length in alias entries for %s\n", cert->getDomain());
+            return 1;
+        }
+        if (same_alts(alts, newAlts))
+        {
+            if (cert->getIfChanged())
+            {
+                LS_NOTICE("[ACME] Domains for %s are unchanged, the cert will not be renewed\n",
+                          cert->getDomain());
+                return ACME_CERT_UNCHANGED;
+            }
+        }
+        else if (!UseAcme::writeAlt(confFile, newAlts))
+            return 1;
+    }
+    if (runAcme(acmeFile, cert, aliases, numAliases) == 0)
+        return 0;
+    /* A still valid cert is not retried: Le_Alt keeps the optional names, so
+     * they are only tried again at the next scheduled renewal. */
+    if (!numOptional || cert->getIfChanged())
+        return 1;
+    numAliases -= numOptional;
+    LS_NOTICE("[ACME] Retry the cert for %s without the optional domains\n",
+              cert->getDomain());
+    if (cert->getRenew()
+        && (!build_alts(aliases, numAliases, newAlts, sizeof(newAlts))
+            || !UseAcme::writeAlt(confFile, newAlts)))
+        return 1;
+    return runAcme(acmeFile, cert, aliases, numAliases) == 0 ? 0 : 1;
+}
+
+
 void AcmeCertMap::processCerts(char *acmeDir, char *configDir, bool programStart)
 {
     char acmeFile[MAX_PATH_LEN];
@@ -558,58 +916,26 @@ void AcmeCertMap::processCerts(char *acmeDir, char *configDir, bool programStart
             exit(1);
         }
         if (pid == 0)
-        {
-            const char *argv[12 + 2 * cert->getAcmeAliasMap()->size()];
-            argv[0] = acmeFile;
-            argv[1] = cert->getRenew() ? "--renew" : "--issue";
-            argv[2] = "-d";
-            argv[3] = cert->getDomain();
-            int index = 4;
-            if (cert->getWildcard())
-            {
-                argv[index++] = "--dns";
-                argv[index++] = cert->getDnsApi();
-            }
-            else
-            {
-                argv[index++] = "--stateless";
-            }
-            for (AcmeAliasMap::iterator it = cert->getAcmeAliasMap()->begin(); 
-                 it != cert->getAcmeAliasMap()->end(); 
-                 it = cert->getAcmeAliasMap()->next(it))
-            {
-                argv[index] = "-d";
-                argv[index + 1] = it.first();
-                index += 2;
-            }
-            if (cert->getRenew() && cert->getForce())
-                argv[index++] = "--force";
-            argv[index++] = "--server";
-            argv[index++] = UseAcme::getServer();
-            if ( log4cxx::Level::isEnabled( log4cxx::Level::DEBUG ) )
-                argv[index++] = "--debug";
-            argv[index] = NULL;
-            char desc[MAX_PATH_LEN];
-            snprintf(desc, sizeof(desc), "%s certificate for %s", 
-                     cert->getRenew() ? "Renew" : "Create", cert->getDomain());
-            if (acmeRequest(acmeFile, desc, (char *const*)argv, 
-                            cert->getDnsEnv()) == 0)
-                exit(0); // Success reported
-            exit(1); // Error reported
-        }
+            exit(requestCert(acmeFile, configDir, cert)); // Result reported
     }
-    int ok = 0, failed = 0, status;
+    int ok = 0, failed = 0, unchanged = 0, status;
     pid_t pid;
     while ((pid = waitpid(-1, &status, 0)))
     {
         if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
             ok++;
+        else if (WIFEXITED(status) && WEXITSTATUS(status) == ACME_CERT_UNCHANGED)
+            unchanged++;
         else
             failed++;
-        if (ok + failed >= (int)size())
+        if (ok + failed + unchanged >= (int)size())
             break;
     }
-    LS_NOTICE("[ACME] %d certs succeeded and %d certs failed\n", ok, failed);
+    if (unchanged)
+        LS_NOTICE("[ACME] %d certs succeeded, %d certs failed and %d certs were unchanged\n",
+                  ok, failed, unchanged);
+    else
+        LS_NOTICE("[ACME] %d certs succeeded and %d certs failed\n", ok, failed);
     if (ok && programStart)
     {
         LS_NOTICE("[ACME] Doing graceful restart to apply new certs\n");
@@ -818,6 +1144,38 @@ void UseAcme::failMap(UseAcme **useAcme, AcmeCert **acmeCert,
 }
 
 
+bool UseAcme::isWwwAlias(const char *alias, const char *primary)
+{
+    return !strncasecmp(alias, "www.", 4) && !strcasecmp(&alias[4], primary);
+}
+
+
+/* Like the ols-docker-env acme.sh script, also cover www.<primary> when it
+ * resolves.  The cert child probes it and leaves it out if it is unreachable. */
+void UseAcme::addWwwAlias(AcmeAliasMap *acmeAliasMap, const char *primary,
+                          bool wildcard, const char *pAddr)
+{
+    if (wildcard || !strncasecmp(primary, "www.", 4))
+        return;
+    for (AcmeAliasMap::iterator it = acmeAliasMap->begin();
+         it != acmeAliasMap->end(); it = acmeAliasMap->next(it))
+    {
+        if (it.second()->getOptional())
+            return; // www.<primary> is already listed
+    }
+    char www[MAX_PATH_LEN];
+    if (snprintf(www, sizeof(www), "www.%s", primary) >= (int)sizeof(www))
+        return;
+    if (!AcmeCertMap::getInstance().validateDomain(getFileDomain(www), pAddr))
+    {
+        LS_DBG("[ACME] %s does not resolve, it will not be added to the cert for %s\n",
+               www, primary);
+        return;
+    }
+    acmeAliasMap->addAlias(primary, www, true);
+}
+
+
 char *UseAcme::getDomainFromDomains(const char *vhost, const char **domains, 
                                     char *domain, size_t domain_len)
 {
@@ -862,8 +1220,17 @@ bool UseAcme::processDomains(char *configDir, const char *vhost, bool vhostOk,
         char domain[MAX_PATH_LEN];
         if (!getDomainFromDomains(vhost, &domains, domain, sizeof(domain)))
             break;
+        const char *primary = useAcme ? useAcme->getDomain()
+                            : acmeCert ? acmeCert->getDomain() : NULL;
+        bool optional = acmeAliasMap && primary && isWwwAlias(domain, primary);
         if (!AcmeCertMap::getInstance().validateDomain(UseAcme::getFileDomain(domain), pAddr))
         {
+            if (optional)
+            {
+                LS_NOTICE("[ACME] Could not validate optional domain: %s, it will be left out of the cert for %s\n",
+                          domain, primary);
+                continue;
+            }
             if (!acmeAliasMap)
                 LS_NOTICE("[ACME] Could not validate domain: %s a cert will not be generated.\n", domain);
             else
@@ -901,8 +1268,7 @@ bool UseAcme::processDomains(char *configDir, const char *vhost, bool vhostOk,
                 failMap(&useAcme, &acmeCert, firstUseAcme, useAcmeMap);
                 break;
             }
-            if (!acmeAliasMap->addAlias(useAcme ? useAcme->getDomain() : acmeCert->getDomain(),
-                                        domain))
+            if (!acmeAliasMap->addAlias(primary, domain, optional))
             {
                 failMap(&useAcme, &acmeCert, firstUseAcme, useAcmeMap);
                 break;
@@ -916,6 +1282,13 @@ bool UseAcme::processDomains(char *configDir, const char *vhost, bool vhostOk,
             }
         }
     }
+    // acmeAliasMap is only valid while useAcme or acmeCert is.
+    if (useAcme)
+        addWwwAlias(acmeAliasMap, useAcme->getDomain(), useAcme->getWildcard(),
+                    pAddr);
+    else if (acmeCert)
+        addWwwAlias(acmeAliasMap, acmeCert->getDomain(), acmeCert->getWildcard(),
+                    pAddr);
     if (useAcme)
     {
         UseAcme *lastUseAcme = useAcme;
@@ -1186,96 +1559,152 @@ time_t UseAcme::findRenewal(FILE *fp)
 }
 
 
+bool UseAcme::getAlt(FILE *fp, char *alts, size_t altsLen)
+{
+    char line[MAX_PATH_LEN];
+    while (fgets(line, sizeof(line) - 1, fp))
+    {
+        if (strncmp(line, "Le_Alt='", 8))
+            continue;
+        size_t len = strcspn(&line[8], "'\n");
+        if (len >= altsLen)
+            len = altsLen - 1;
+        memcpy(alts, &line[8], len);
+        alts[len] = 0;
+        LS_DBG("[ACME] Found Le_Alt: %s\n", alts);
+        return true;
+    }
+    return false;
+}
+
+
+bool UseAcme::writeAlt(const char *confFile, const char *alts)
+{
+    LS_DBG("[ACME] New Le_Alt string: %s\n", alts);
+    char line[MAX_PATH_LEN], confFile2[MAX_PATH_LEN];
+    snprintf(confFile2, sizeof(confFile2), "%s.new", confFile);
+    FILE *fpread = fopen(confFile, "r"), *fpwrite = NULL;
+    struct stat st;
+    int copying = 0;
+    if (!fpread)
+        LS_ERROR("[ACME] Error reopening domain configuration file: %s, %s\n", confFile, strerror(errno));
+    else if (!(fpwrite = fopen(confFile2, "w")))
+        LS_ERROR("[ACME] Error opening alternate configuration file: %s: %s\n", confFile2, strerror(errno));
+    else
+    {
+        // Keep the file writable by acme.sh, which runs as lsadm.
+        if (!fstat(fileno(fpread), &st)
+            && (fchmod(fileno(fpwrite), st.st_mode & 07777)
+                || fchown(fileno(fpwrite), st.st_uid, st.st_gid)))
+            LS_DBG("[ACME] Unable to keep the owner and mode of %s: %s\n",
+                   confFile, strerror(errno));
+        while (fgets(line, sizeof(line) - 1, fpread))
+        {
+            if (!strncmp(line, "Le_Alt='", 8))
+                fprintf(fpwrite, "Le_Alt='%s'\n", alts);
+            else
+                fputs(line, fpwrite);
+            copying = 1;
+        }
+    }
+    if (fpwrite && fclose(fpwrite))
+    {
+        LS_ERROR("[ACME] Error writing alternate configuration file: %s: %s\n", confFile2, strerror(errno));
+        copying = 0;
+    }
+    if (fpread)
+        fclose(fpread);
+    if (copying && !rename(confFile2, confFile))
+        return true;
+    if (copying)
+        LS_ERROR("[ACME] Error replacing domain configuration file: %s: %s\n", confFile, strerror(errno));
+    if (fpwrite)
+        unlink(confFile2);
+    return false;
+}
+
+
 UseAcme *UseAcme::validateAcme(char *configDir, UseAcme *useAcme)
 {
     LS_DBG("[ACME] ValidateAcme for %s\n", useAcme->getDomain());
-    char line[MAX_PATH_LEN];
     FILE *fp;
-    int invalid_cert = 0, renew_cert = 0;
-    AcmeAliasMap acmeAliasMap;
-    char confFile[MAX_PATH_LEN];
-    if (!(fp = openConfFile(configDir, useAcme->getDomain(), confFile)))
-        invalid_cert = 1;
-    else while (fgets(line, sizeof(line) - 1, fp))
+    char confFile[MAX_PATH_LEN], alts[MAX_PATH_LEN];
+    bool valid = false;
+    if ((fp = openConfFile(configDir, useAcme->getDomain(), confFile)))
     {
-        LS_DBG("[ACME] Looking for Le_Alt in %s", line);
-        if (!strncmp(line, "Le_Alt='", 8))
+        if (!(valid = getAlt(fp, alts, sizeof(alts))))
         {
-            char alts[MAX_PATH_LEN];
-            strncpy(alts, &line[8], sizeof(alts));
-            char *quote = strchr(alts, '\'');
-            if (quote)
-                *quote = 0;
-            if (!(strcmp(alts, "no")))
-            {
-                if (!useAcme->m_acmeAliasMap.size())
-                {
-                    LS_DBG("[ACME] Aliases matched (0)!\n");
-                    useAcme->m_renewal = findRenewal(fp);
-                    fclose(fp);
-                    return useAcme;
-                }
-                LS_NOTICE("[ACME] Change of automatic cert aliases for %s (lost, were %ld, first: %s).  Regenerate\n", 
-                          useAcme->getDomain(), useAcme->m_acmeAliasMap.size(), (char *)useAcme->m_acmeAliasMap.begin()->first());
-                renew_cert = 1;
-                break;
-            }
-            char *domain = alts;
-            size_t num_domains = 0;
-            while (*domain && *domain != '\n')
-            {
-                char *comma = strchr(domain, ',');
-                if (comma)
-                    *comma = 0;
-                acmeAliasMap.insert(domain, NULL);
-                if (useAcme->m_acmeAliasMap.find(domain) == useAcme->m_acmeAliasMap.end())
-                {
-                    if (!renew_cert)
-                    {
-                        LS_NOTICE("[ACME] Change of automatic cert aliases for %s.  Regenerate\n", useAcme->getDomain());
-                        renew_cert = 1;
-                    }
-                }
-                num_domains++;
-                if (comma)
-                    domain = comma + 1;
-                else
-                    domain += strlen(domain);
-            }
-            if (!renew_cert)
-            {
-                if (num_domains == useAcme->m_acmeAliasMap.size())
-                {
-                    LS_DBG("[ACME] liases matched (%ld)!\n", num_domains);
-                    useAcme->m_renewal = findRenewal(fp);
-                    fclose(fp);
-                    return useAcme;
-                }
-                LS_NOTICE("[ACME] Change of count of automatic cert ailiases for %s.  Regnerate\n", useAcme->getDomain());
-                renew_cert = 1;
-            }
-            break;
+            LS_NOTICE("[ACME] Missing Le_Alt entry in %s configuration file, invalid\n", useAcme->getDomain());
+            fclose(fp);
         }
     }
-    if (fp)
-        fclose(fp);
-    if (!invalid_cert && !renew_cert)
-    {
-        LS_NOTICE("[ACME] Missing Le_Alt entry in %s configuration file, invalid\n", useAcme->getDomain());
-        invalid_cert = 1;
-    }
-    if (invalid_cert)
+    if (!valid)
     {
         UseAcmeMap::getInstance().remove(useAcme->getDomain());
         AcmeVHostMap::getInstance().removeUseAcme(useAcme);
         delete useAcme;
         return NULL;
     }
-    return setupRenew(useAcme, confFile, true);
+    AcmeAliasMap *aliasMap = useAcme->getAcmeAliasMap();
+    AcmeAliasMap certAliases;   // Keys point into alts
+    bool renew_cert = false, optional_missing = false;
+    char *domain = alts, *altsEnd = alts + strlen(alts);
+    if (!strcmp(alts, "no"))
+        domain = altsEnd;
+    while (domain < altsEnd)
+    {
+        char *comma = strchr(domain, ',');
+        if (comma)
+            *comma = 0;
+        if (*domain && aliasMap->find(domain) == aliasMap->end())
+        {
+            // A www alias the cert has is kept until a renewal probe fails.
+            if (!useAcme->getWildcard() && isWwwAlias(domain, useAcme->getDomain()))
+                aliasMap->addAlias(useAcme->getDomain(), domain, true);
+            else if (!renew_cert)
+            {
+                LS_NOTICE("[ACME] Change of automatic cert aliases for %s (removed %s).  Regenerate\n",
+                          useAcme->getDomain(), domain);
+                renew_cert = true;
+            }
+        }
+        if (*domain)
+            certAliases.insert(domain, NULL);
+        domain += strlen(domain) + 1;
+    }
+    for (AcmeAliasMap::iterator it = aliasMap->begin();
+         !renew_cert && it != aliasMap->end(); it = aliasMap->next(it))
+    {
+        if (certAliases.find(it.first()) != certAliases.end())
+            continue;
+        if (it.second()->getOptional() && !useAcme->getWildcard())
+            optional_missing = true;
+        else
+        {
+            LS_NOTICE("[ACME] Change of automatic cert aliases for %s (added %s).  Regenerate\n",
+                      useAcme->getDomain(), it.first());
+            renew_cert = true;
+        }
+    }
+    if (renew_cert)
+    {
+        fclose(fp);
+        return setupRenew(useAcme, true, false);
+    }
+    useAcme->m_renewal = findRenewal(fp);
+    fclose(fp);
+    if (!optional_missing)
+    {
+        LS_DBG("[ACME] Aliases matched (%ld)!\n", aliasMap->size());
+        return useAcme;
+    }
+    LS_NOTICE("[ACME] Optional domains are not in the cert for %s, add them if they are reachable\n",
+              useAcme->getDomain());
+    return setupRenew(useAcme, true, true);
 }
 
 
-UseAcme *UseAcme::setupRenew(UseAcme *useAcme, char *confFile, bool force)
+UseAcme *UseAcme::setupRenew(UseAcme *useAcme, bool force, bool ifChanged)
 {
     LS_DBG("[ACME] Renew: use the cert, but also generate a AcmeCertMap entry.\n");
     AcmeCert *acmeCert = AcmeCertMap::getInstance().doQueue(useAcme->getVhost(), 
@@ -1284,61 +1713,24 @@ UseAcme *UseAcme::setupRenew(UseAcme *useAcme, char *confFile, bool force)
                                                             useAcme->getAddr());
     if (!acmeCert)
         return useAcme;
+    // An unconditional renewal wins over a conditional one.
+    if (!acmeCert->getRenew() || !ifChanged)
+        acmeCert->setIfChanged(ifChanged);
     acmeCert->setRenew(true);
     if (force)
         acmeCert->setForce(true);
-    char newDomain[MAX_PATH_LEN] = { 0 }, *pos = newDomain;
     for (AcmeAliasMap::iterator it = useAcme->getAcmeAliasMap()->begin(); 
          it != useAcme->getAcmeAliasMap()->end(); 
          it = useAcme->getAcmeAliasMap()->next(it))
     {
         if (strchr(it.first(), '*'))
             acmeCert->setWildcard(true);
-        if (pos != newDomain)
-            *(pos++) = ',';
-        int len = strlen(it.first());
-        if ((pos + 2 + len - newDomain) > (ssize_t)sizeof(newDomain))
-        {
-            LS_ERROR("[ACME] Exceeded string length in alias entries for %s\n", useAcme->getDomain());
-            return useAcme;
-        }
-        memcpy(pos, it.first(), len);
-        pos += len;
-        AcmeAlias *acmeAlias = acmeCert->getAcmeAliasMap()->addAlias(useAcme->getDomain(), it.first());
+        AcmeAlias *acmeAlias = acmeCert->getAcmeAliasMap()->addAlias(
+            useAcme->getDomain(), it.first(), it.second()->getOptional());
         if (!acmeAlias)
         {
             delete acmeCert;
             return useAcme;
-        }
-    }
-    *pos = 0;
-    if (confFile)
-    {
-        LS_DBG("[ACME] New Le_Alt string: %s\n", newDomain);
-        char line[MAX_PATH_LEN], confFile2[MAX_PATH_LEN];
-        snprintf(confFile2, sizeof(confFile2), "%s.new", confFile);
-        FILE *fpread = fopen(confFile, "r"), *fpwrite = NULL;
-        int copying = 0;
-        if (!fpread)
-            LS_ERROR("[ACME] Error reopening domain configuration file: %s, %s\n", confFile, strerror(errno));
-        else if (!(fpwrite = fopen(confFile2, "w")))
-            LS_ERROR("[ACME] Error opening alternate configuration file: %s: %s\n", confFile2, strerror(errno));
-        else while (fgets(line, sizeof(line) - 1, fpread))
-        {
-            if (!strncmp(line, "Le_Alt='", 8))
-                fprintf(fpwrite, "Le_Alt='%s'\n", newDomain);
-            else
-                fputs(line, fpwrite);
-            copying = 1;
-        }
-        if (fpwrite)
-            fclose(fpwrite);
-        if (fpread)
-            fclose(fpread);
-        if (copying)
-        {
-            remove(confFile);
-            rename(confFile2, confFile);
         }
     }
     return useAcme;
@@ -1398,15 +1790,17 @@ void UseAcmeMap::findDeleted()
             continue;
         }
         LS_DBG("[ACME]    NOT IN USE: DELETE!\n");
-        deleteFromAcme(acmeDir, configDir, domain);
-        deleteDir(domainDir, ent->d_name);
+        // The child removes the directory once acme.sh is done with it;
+        // removing it here races the revoke, which then finds no certificate.
+        deleteFromAcme(acmeDir, configDir, domain, domainDir, ent->d_name);
         remove(domain);
     }
     closedir(dir);
 }
 
 
-bool UseAcmeMap::deleteFromAcme(char *acmeDir, char *configDir, const char *domain)
+bool UseAcmeMap::deleteFromAcme(char *acmeDir, char *configDir, const char *domain,
+                                char *domainDir, char *certDir)
 {
     char acmeFile[MAX_PATH_LEN];
     snprintf(acmeFile, sizeof(acmeFile), "%s/acme.sh", acmeDir);
@@ -1433,6 +1827,7 @@ bool UseAcmeMap::deleteFromAcme(char *acmeDir, char *configDir, const char *doma
     snprintf(desc, sizeof(desc), "Remove certificate for %s", domain);
     AcmeCertMap::getInstance().acmeRequest(acmeFile, desc, 
                                            (char *const*)argv2, NULL);
+    deleteDir(domainDir, certDir);
     exit(0);
 }
 
@@ -1496,7 +1891,7 @@ void UseAcmeMap::renewCerts()
         if (now >= useAcme->getRenewal())
         {
             LS_DBG("[ACME] Do renewal!\n");
-            if (UseAcme::setupRenew(useAcme, NULL, false))
+            if (UseAcme::setupRenew(useAcme, false, false))
                 renewalQueued = true;
         }
     }

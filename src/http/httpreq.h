@@ -21,6 +21,7 @@
 #include <http/httpheader.h>
 #include <http/httpmethod.h>
 #include <http/httpstatuscode.h>
+#include <http/multipartbodyguard.h>
 
 #include "httpvhost.h"
 #include <ls.h>
@@ -295,6 +296,7 @@ private:
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
     short               m_iBodyType;
+    MultipartBodyGuard  m_multipartBodyGuard;
 
     LogSession         *m_pLogSession;
     LogSession         *m_pILog;
@@ -564,6 +566,9 @@ public:
     int  postRewriteProcess(const char *pURI, int len);
     int  processContextPath();
     int  processContext();
+#ifdef RUN_TEST
+    int  testFilesMatch(const char *pEnd) { return filesMatch(pEnd); }
+#endif
     int  checkPathInfo(const char *pURI, int iURILen, int &pathLen,
                        short &scriptLen, short &pathInfoLen,
                        const HttpContext *pContext);
@@ -627,6 +632,14 @@ public:
 
     VMemBuf *getBodyBuf() const             {   return m_pReqBodyBuf;       }
     short getBodyType() const               {   return m_iBodyType;  }
+
+    bool inspectMultipartBody(const char *pBuf, size_t len)
+    {
+        return m_iBodyType == REQ_BODY_MULTIPART
+               && m_multipartBodyGuard.inspect(pBuf, len);
+    }
+    bool isMultipartBodyBlocked() const
+    {   return m_multipartBodyGuard.isBlocked();   }
 
     int prepareReqBodyBuf();
     void replaceBodyBuf(VMemBuf *pBuf);
@@ -744,7 +757,16 @@ public:
 //     {   m_pHTAContext = pCtx;   }
 //     const HttpContext * getHTAContext() const
 //     {   return m_pHTAContext;   }
-    void setContext(const HttpContext *pCtx) {   m_pContext = pCtx;          }
+    //The FilesMatch context and the auth check both belong to m_pContext.
+    void setContext(const HttpContext *pCtx)
+    {
+        if (pCtx != m_pContext)
+        {
+            m_pFMContext = NULL;
+            m_iContextState &= ~CONTEXT_AUTH_CHECKED;
+        }
+        m_pContext = pCtx;
+    }
     const HttpContext *getContext() const   {   return m_pContext;          }
     const HttpContext *getFMContext() const {   return m_pFMContext;        }
 
@@ -798,7 +820,10 @@ public:
     {   return m_lEntityFinished + getHttpHeaderLen();  }
 
     void popHeaderEndCrlf();
-    int  applyHeaderOps(HttpSession *pSession, HttpRespHeaders *pRespHeader);
+    bool hasLinkHeaderOps() const;
+    //With linksOnly, LS_AGAIN means the projected batch must be deferred.
+    int  applyHeaderOps(HttpSession *pSession, HttpRespHeaders *pRespHeader,
+                        bool linksOnly = false);
 
     int parseMethod(const char *pCur, const char *pBEnd);
     int parseHost(const char *pCur, const char *pBEnd);
@@ -927,8 +952,9 @@ public:
     int applyOp(HttpSession *pSession, const HeaderOp *pOp);
     int  applyOp(HttpSession *pSession, HttpRespHeaders *pRespHeader,
                  const HeaderOp *pOp);
-    void applyOps(HttpSession *pSession, HttpRespHeaders *pRespHeader,
-                  const HttpHeaderOps *getHeaders, int arg2);
+    int applyOps(HttpSession *pSession, HttpRespHeaders *pRespHeader,
+                  const HttpHeaderOps *getHeaders, int arg2,
+                  bool linksOnly = false);
 
     int createHeaderValue(HttpSession *pSession, const char *pFmt, int len,
                           char *pBuf, int maxLen);
@@ -958,6 +984,12 @@ public:
 
     int checkUrlStaicFileCache();
     static_file_data_t *getUrlStaticFileData() { return m_pUrlStaticFileData;}
+    //Keep direct directory/index mappings under the client URL, but never
+    //cache a redirected target under the original script or rewrite URL.
+    const char *getUrlStaticFileCacheKey()
+    {   return m_iRedirects ? getURI() : getOrgReqURL();                    }
+    int getUrlStaticFileCacheKeyLen()
+    {   return m_iRedirects ? getURILen() : getOrgReqURLLen();              }
 };
 
 

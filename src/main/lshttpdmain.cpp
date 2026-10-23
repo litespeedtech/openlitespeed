@@ -84,6 +84,9 @@
 #include <time.h>
 #include <unistd.h>
 #include <config.h>
+#if defined(__linux__)
+#include <sys/syscall.h>
+#endif
 #include <sys/stat.h>
 
 #define GRACEFUL_PID_FILE   DEFAULT_TMP_DIR "graceful.pid"
@@ -91,7 +94,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  "built: Tue Sep 29 03:06:49 UTC 2026"
+#define BUILDTIME  "built: Thu Oct 22 18:54:45 UTC 2026"
 
 static const char s_pVersionFull[] = "LiteSpeed/" PACKAGE_VERSION
         " Open (" LS_MODULE_VERSION_INFO_ONELINE ") BUILD (" BUILDTIME ")";
@@ -116,6 +119,7 @@ LshttpdMain::LshttpdMain()
     , m_curChildren(0)
     , m_fdAdmin(-1)
     , m_fdCmd(-1)
+    , m_btCollectorPid(0)
 {
     m_pServer = &HttpServer::getInstance();
 
@@ -238,6 +242,207 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
         }
         ::system("mv " DEFAULT_TMP_DIR "/core* " DEFAULT_TMP_DIR "/bak_core");
     }
+    return 0;
+}
+
+
+#define STACK_BT_TIMEOUT    30
+
+static const char *findGdbPath()
+{
+    static const char *s_gdbPaths[] =
+    {   "/usr/bin/gdb", "/usr/local/bin/gdb", "/bin/gdb", NULL  };
+    // Running as root: never resolve GDB through the inherited PATH.
+    const char *pGDB = MainServerConfig::getInstance().getGDBPath();
+    if (pGDB && *pGDB == '/' && access(pGDB, X_OK) == 0)
+        return pGDB;
+    for (const char **p = s_gdbPaths; *p; ++p)
+    {
+        if (access(*p, X_OK) == 0)
+            return *p;
+    }
+    return NULL;
+}
+
+
+static void closeFdsFrom(int lowFd)
+{
+#if defined(__linux__) && defined(SYS_close_range)
+    if (syscall(SYS_close_range, lowFd, ~0U, 0) == 0)
+        return;
+#elif defined(__FreeBSD__)
+    closefrom(lowFd);
+    return;
+#endif
+    long maxFd = sysconf(_SC_OPEN_MAX);
+    if (maxFd < 0)
+        maxFd = 65536;
+    for (long i = lowFd; i < maxFd; ++i)
+        close(i);
+}
+
+
+static int collectChildStackBt(pid_t pid, const char *pGdb,
+                               const char *output_file)
+{
+    // Inherited watchdog handlers only set flags; restore the defaults so
+    // the collector can be stopped and can wait for its own GDB child.
+    static const int s_sigs[] =
+    {   SIGCHLD, SIGTERM, SIGINT, SIGHUP, SIGALRM, SIGUSR1, SIGUSR2   };
+    for (const int *p = s_sigs; p < s_sigs + sizeof(s_sigs) / sizeof(int);
+         ++p)
+        signal(*p, SIG_DFL);
+
+    int fd = open(output_file, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW,
+                  0600);
+    if (fd == -1)
+    {
+        LS_ERROR("[Worker diagnostics] Cannot open %s for pid %d: %s",
+                 output_file, (int)pid, strerror(errno));
+        return 1;
+    }
+    char pidBuf[32];
+    snprintf(pidBuf, sizeof(pidBuf), "%d", (int)pid);
+    pid_t debugger = fork();
+    if (debugger == 0)
+    {
+        if (dup2(fd, STDOUT_FILENO) == -1
+            || dup2(fd, STDERR_FILENO) == -1)
+            _exit(126);
+        int nullFd = open("/dev/null", O_RDONLY);
+        if (nullFd == -1 || dup2(nullFd, STDIN_FILENO) == -1)
+            _exit(126);
+        // Do not retain listeners, control sockets, or log descriptors in GDB.
+        closeFdsFrom(3);
+        unsetenv("DEBUGINFOD_URLS");
+        // -iex settings apply before the attach loads symbols.
+        const char *argv[] =
+        {
+            pGdb, "--nx", "--nh", "--batch", "--quiet",
+            "-iex", "set auto-load off",
+            "-iex", "set debuginfod enabled off",
+            "-iex", "set pagination off",
+            "-iex", "set width 0",
+            "-ex", "set print elements 128",
+            "-ex", "info threads",
+            "-ex", "thread apply all bt full",
+            "-ex", "thread apply all info registers",
+            "-ex", "thread apply all x/16i $pc",
+            "-ex", "info proc status",
+            "-ex", "info proc mappings",
+            "-ex", "info sharedlibrary",
+            "-ex", "detach", "--pid", pidBuf, NULL
+        };
+        execv(pGdb, (char *const *)argv);
+        dprintf(STDERR_FILENO, "Cannot execute %s: %s\n", pGdb,
+                strerror(errno));
+        _exit(127);
+    }
+    if (debugger == -1)
+    {
+        LS_ERROR("[Worker diagnostics] Cannot fork GDB for pid %d: %s",
+                 (int)pid, strerror(errno));
+        close(fd);
+        return 1;
+    }
+    close(fd);
+
+    // Only the collector waits here; the watchdog has already returned.
+    time_t deadline = time(NULL) + STACK_BT_TIMEOUT;
+    int status = 0;
+    pid_t ret;
+    while ((ret = waitpid(debugger, &status, WNOHANG)) == 0
+           || (ret == -1 && errno == EINTR))
+    {
+        if (time(NULL) >= deadline)
+        {
+            kill(debugger, SIGKILL);
+            while (waitpid(debugger, &status, 0) == -1 && errno == EINTR)
+                ;
+            // The kernel detaches a dead tracer's tracee, but the worker
+            // may remain in the SIGSTOP group-stop from PTRACE_ATTACH.
+            kill(pid, SIGCONT);
+            LS_ERROR("[Worker diagnostics] GDB timed out after %d seconds "
+                     "for pid %d, output: %s", STACK_BT_TIMEOUT, (int)pid,
+                     output_file);
+            return 1;
+        }
+        usleep(100000);
+    }
+    if (ret == debugger && WIFEXITED(status) && WEXITSTATUS(status) == 0)
+    {
+        LS_NOTICE("[Worker diagnostics] GDB completed for pid %d, output: %s",
+                  (int)pid, output_file);
+        return 0;
+    }
+    LS_ERROR("[Worker diagnostics] GDB failed for pid %d, output: %s "
+             "(wait result %d, status %d)", (int)pid, output_file,
+             (int)ret, ret == debugger ? status : -1);
+    return 1;
+}
+
+
+int LshttpdMain::getChildStackBtFile(pid_t pid, char *pBuf, int bufLen)
+{
+    struct timeval tv;
+    struct tm tm;
+    char achName[128];
+    gettimeofday(&tv, NULL);
+    localtime_r(&tv.tv_sec, &tm);
+    // Millisecond resolution keeps snapshots of the same pid distinct.
+    snprintf(achName, sizeof(achName),
+             "logs/stackbt.%d.%04d%02d%02d-%02d%02d%02d.%03d.log", (int)pid,
+             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+             tm.tm_min, tm.tm_sec, (int)(tv.tv_usec / 1000));
+    int len = getFullPath(achName, pBuf, bufLen);
+    if (len <= 0 || len >= bufLen - 1)
+        return -1;
+    return len;
+}
+
+
+int LshttpdMain::checkChildStackBt(pid_t pid, const char *output_file)
+{
+    if (!output_file || !*output_file || !findChild(pid))
+    {
+        LS_ERROR("[Worker diagnostics] Invalid pid %d or output file.",
+                 (int)pid);
+        errno = EINVAL;
+        return -1;
+    }
+    if (m_btCollectorPid > 0)
+    {
+        LS_NOTICE("[Worker diagnostics] Collector %d still running, "
+                  "skip GDB for pid %d.", (int)m_btCollectorPid, (int)pid);
+        errno = EBUSY;
+        return -1;
+    }
+    const char *pGdb = findGdbPath();
+    if (!pGdb)
+    {
+        LS_ERROR("[Worker diagnostics] GDB not found, skip pid %d.",
+                 (int)pid);
+        errno = ENOENT;
+        return -1;
+    }
+
+    pid_t collector = fork();
+    if (collector == -1)
+    {
+        int err = errno;
+        LS_ERROR("[Worker diagnostics] Cannot fork for pid %d: %s",
+                 (int)pid, strerror(err));
+        errno = err;
+        return -1;
+    }
+    if (collector == 0)
+        _exit(collectChildStackBt(pid, pGdb, output_file));
+
+    // Parent never waits for GDB. waitChildren() reaps the collector.
+    m_btCollectorPid = collector;
+    LS_NOTICE("[Worker diagnostics] Scheduled GDB for pid %d, "
+              "collector %d, output: %s", (int)pid, (int)collector,
+              output_file);
     return 0;
 }
 
@@ -1388,6 +1593,15 @@ void LshttpdMain::waitChildren()
     //printf( "waitpid()\n" );
     while ((rpid = ::waitpid(-1, &stat, WNOHANG)) > 0)
     {
+        if (rpid == m_btCollectorPid)
+        {
+            // Not a worker; never report it as a crash.
+            m_btCollectorPid = 0;
+            if (WIFSIGNALED(stat))
+                LS_ERROR("[Worker diagnostics] Collector %d killed by "
+                         "signal %d.", rpid, WTERMSIG(stat));
+            continue;
+        }
         if (WIFEXITED(stat))
         {
             ret = WEXITSTATUS(stat);
@@ -1467,6 +1681,19 @@ int LshttpdMain::recoverShmCrash(ChildProc *pProc)
         Adns::deleteCache();
     }
     return 0;
+}
+
+
+ChildProc *LshttpdMain::findChild(pid_t pid)
+{
+    ChildProc *pProc = (ChildProc *)m_childrenList.begin();
+    while (pProc)
+    {
+        if (pProc->m_pid == pid)
+            return pProc;
+        pProc = (ChildProc *)pProc->next();
+    }
+    return NULL;
 }
 
 

@@ -423,7 +423,7 @@ static int isBypassCheck(lsi_session_t *session)
 {
     char var[4] = {0};
     int len = g_api->get_req_env(session,
-                                 "modsecurity", 11, var, 3);
+                                 "modsecurity", 11, var, sizeof(var));
     if (len == 3 && strncasecmp(var, "off", 3) == 0)
         return 1;
     else

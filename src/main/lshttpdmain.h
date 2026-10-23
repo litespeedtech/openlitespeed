@@ -78,6 +78,7 @@ class LshttpdMain
     int                 m_curChildren;
     int                 m_fdAdmin;
     int                 m_fdCmd;
+    pid_t               m_btCollectorPid;
 
     int     getFullPath(const char *pRelativePath, char *pBuf, int bufLen);
     int     execute(const char *pExecCmd, const char *pParam);
@@ -129,6 +130,7 @@ class LshttpdMain
     void            initAio();
     int             startChild(ChildProc *pProc);
     void            onNewChildStart(ChildProc * pProc);
+    ChildProc      *findChild(pid_t pid);
     int             childDead(int pid);
     void            stopAllChildren(int nowait);
     void            waitChildren();
@@ -156,6 +158,18 @@ class LshttpdMain
 public:
     LshttpdMain();
     ~LshttpdMain();
+    // Builds $SERVER_ROOT/logs/stackbt.<pid>.<YYYYmmdd-HHMMSS.mmm>.log.
+    // Returns the path length, or -1 if it does not fit in pBuf.
+    int getChildStackBtFile(pid_t pid, char *pBuf, int bufLen);
+    // Snapshots all threads of tracked worker pid with GDB into a new
+    // output_file (never overwritten). Returns 0 when scheduled, or -1 with
+    // errno EINVAL (not a tracked worker), EBUSY (a collector is running),
+    // ENOENT (no GDB), or a fork error. Call from the watchdog; only the
+    // forked collector waits for GDB, which is killed after 30 seconds.
+    // Completion is logged asynchronously. Do not kill the worker while
+    // isChildStackBtRunning(), or the snapshot is lost.
+    int checkChildStackBt(pid_t pid, const char *output_file);
+    bool isChildStackBtRunning() const  {   return m_btCollectorPid > 0;    }
     int main(int argc, char *argv[]);
 };
 
