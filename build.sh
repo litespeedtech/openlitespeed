@@ -778,6 +778,10 @@ else
     echo -e "\e[31mYour webAdmin password not changed.\e[39m"
 fi
 echo
+if [ ! -f \${SERVERROOT}/admin/conf/enable_webadmin ] ; then
+    echo -e "\e[31mWebAdmin console is disabled by default. To enable it, create file \${SERVERROOT}/admin/conf/enable_webadmin and restart the server.\e[39m"
+    echo
+fi
 
     
 if [ -f ../needreboot.txt ] ; then

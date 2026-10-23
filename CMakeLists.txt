@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0...3.23)
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-Project(openlitespeed VERSION 1.9.3)
+Project(openlitespeed VERSION 1.9.4)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 INCLUDE(GNUInstallDirs)
 

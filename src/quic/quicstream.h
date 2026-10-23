@@ -35,8 +35,29 @@ class QuicStream : private lsquic_stream_ctx_t
                  , public HioCrypto
                  , public DLinkedObj
 {
+    struct PendingHeaders
+    {
+        HttpRespHeaders *headers;
+        send_hdr_flag flag;
+        PendingHeaders *next;
+    };
+    PendingHeaders *m_pendingHeaders;
+    PendingHeaders *m_lastHeaders;
+    bool m_hasInformational;
+    bool m_headersPending;
+    bool m_finPending;
+
+    int sendHeaderBlock(HttpRespHeaders *headers, send_hdr_flag flag);
+    int flushPendingHeaders();
+    void clearPendingHeaders();
+
 public:
     QuicStream()
+        : m_pendingHeaders(NULL)
+        , m_lastHeaders(NULL)
+        , m_hasInformational(false)
+        , m_headersPending(false)
+        , m_finPending(false)
     {   lsquic_stream_ctx_t::m_pStream = NULL;     }
     ~QuicStream();
     int init(lsquic_stream_t *s);
@@ -64,7 +85,6 @@ public:
     virtual int write(const char *pBuf, int size);
     virtual int doneWrite();
     virtual const char *buildLogId();
-    virtual int push(UnpackedHeaders *hdrs);
 
     virtual int getEnv(HioCrypto::ENV id, char *&val, int maxValLen);
 

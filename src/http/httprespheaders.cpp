@@ -518,11 +518,6 @@ int HttpRespHeaders::add(INDEX headerIndex, const char *pName, unsigned nameLen,
             pName = s_sHeaders[headerIndex];
             nameLen = getNameLen(headerIndex);
         }
-        if (headerIndex == H_LINK)
-        {
-            if (memmem(pVal, valLen, "preload", 7) != NULL)
-                m_flags |= HRH_F_HAS_PUSH;
-        }
     }
     if (headerIndex == H_HEADER_END)   // || headerIndex == H_UNKNOWN )
     {
@@ -565,7 +560,10 @@ int HttpRespHeaders::add(INDEX headerIndex, const char *pName, unsigned nameLen,
     if ((method == LSI_HEADER_MERGE || method == LSI_HEADER_ADD)
         && (pKv->val_len > 0))
     {
-        if (headerIndex != H_SET_COOKIE || method != LSI_HEADER_ADD)
+        //Link members can contain commas in URIs and quoted parameters.
+        //Preserve each added field rather than using generic list deduplication.
+        if ((headerIndex != H_SET_COOKIE && headerIndex != H_LINK)
+            || method != LSI_HEADER_ADD)
         {
             if (memchr(pVal, ',', valLen) != NULL)
             {
@@ -639,7 +637,7 @@ int HttpRespHeaders::appendLastVal(const char *pVal, int valLen)
     if (pKv->name_len == 0)
         return -1;
 
-    if ((size_t)valLen > (size_t)HRH_MAX_LEN - pKv->val_len)
+    if ((size_t)pKv->name_len + pKv->val_len + valLen + 4 > HRH_MAX_LEN)
         return -1;
 
     if (m_buf.available() < valLen)
@@ -1230,6 +1228,151 @@ int HttpRespHeaders::appendToIov(IOVec *iovec, int &addCrlf)
  *
  * The below functions may be moved to another classes
  */
+static bool isHintRelation(const char *p, const char *end)
+{
+    while (p < end)
+    {
+        while (p < end && (*p == ' ' || *p == '\t'))
+            ++p;
+        const char *token = p;
+        while (p < end && *p != ' ' && *p != '\t')
+            ++p;
+        if ((p - token == 7 && strncasecmp(token, "preload", 7) == 0)
+            || (p - token == 13 && strncasecmp(token, "modulepreload", 13) == 0)
+            || (p - token == 10 && strncasecmp(token, "preconnect", 10) == 0))
+            return true;
+    }
+    return false;
+}
+
+
+static bool isHintLink(const char *p, const char *end)
+{
+    if (p == end || *p++ != '<')
+        return false;
+    p = (const char *)memchr(p, '>', end - p);
+    if (!p)
+        return false;
+    ++p;
+    bool hint = false;
+    bool hasRel = false;
+    while (p < end)
+    {
+        while (p < end && (*p == ' ' || *p == '\t'))
+            ++p;
+        if (p == end)
+            break;
+        if (*p++ != ';')
+            return false;
+        while (p < end && (*p == ' ' || *p == '\t'))
+            ++p;
+        const char *name = p;
+        while (p < end && *p != '=' && *p != ';' && *p != ' ' && *p != '\t')
+            ++p;
+        int nameLen = p - name;
+        if (!nameLen)
+            return false;
+        //An anchor changes the link's context; it is not a hint for this page.
+        if (nameLen == 6 && strncasecmp(name, "anchor", 6) == 0)
+            return false;
+        while (p < end && (*p == ' ' || *p == '\t'))
+            ++p;
+        if (p == end || *p != '=')
+            continue;
+        ++p;
+        while (p < end && (*p == ' ' || *p == '\t'))
+            ++p;
+        const char *value = p;
+        const char *valueEnd;
+        if (p < end && *p == '"')
+        {
+            value = ++p;
+            while (p < end && *p != '"')
+            {
+                if (*p == '\\' && p + 1 < end)
+                    ++p;
+                ++p;
+            }
+            if (p == end)
+                return false;
+            valueEnd = p++;
+        }
+        else
+        {
+            while (p < end && *p != ';' && *p != ' ' && *p != '\t')
+                ++p;
+            valueEnd = p;
+        }
+        if (!hasRel && nameLen == 3 && strncasecmp(name, "rel", 3) == 0)
+        {
+            hasRel = true;
+            hint = isHintRelation(value, valueEnd);
+        }
+    }
+    return hint;
+}
+
+
+int HttpRespHeaders::buildEarlyHints(HttpRespHeaders &hints)
+{
+    int index = m_KVPairindex[H_LINK];
+    if (index == HRH_IDX_NONE)
+        return 0;
+    int count = 0;
+    while (index >= 0)
+    {
+        lsxpack_header *kv = getKvPair(index);
+        const char *p = getVal(kv);
+        const char *end = p + kv->val_len;
+        if (memchr(p, '\r', end - p) || memchr(p, '\n', end - p))
+        {
+            index = (kv->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) - 1;
+            continue;
+        }
+        while (p < end)
+        {
+            while (p < end && (*p == ' ' || *p == '\t' || *p == ','))
+                ++p;
+            const char *start = p;
+            bool quoted = false;
+            bool uri = false;
+            while (p < end)
+            {
+                if (quoted && *p == '\\' && p + 1 < end)
+                {
+                    p += 2;
+                    continue;
+                }
+                if (!uri && *p == '"')
+                    quoted = !quoted;
+                else if (!quoted && *p == '<')
+                    uri = true;
+                else if (!quoted && *p == '>')
+                    uri = false;
+                else if (!quoted && !uri && *p == ',')
+                    break;
+                ++p;
+            }
+            const char *memberEnd = p;
+            while (memberEnd > start
+                   && (memberEnd[-1] == ' ' || memberEnd[-1] == '\t'))
+                --memberEnd;
+            if (!quoted && !uri && isHintLink(start, memberEnd))
+            {
+                if (hints.add(H_LINK, start, memberEnd - start,
+                              LSI_HEADER_ADD) != LS_OK)
+                    return LS_FAIL;
+                ++count;
+            }
+            if (p < end)
+                ++p;
+        }
+        index = (kv->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) - 1;
+    }
+    return count;
+}
+
+
 int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
 {
     if (m_iHttpCode == SC_100)
@@ -1242,12 +1385,14 @@ int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
         iovec->append("\r\n", 2);
         return 0;
     }
-    if (m_iKeepAlive)
+    //Early Hints does not change the connection's persistence.
+    if (m_iHttpCode != SC_103)
     {
-        add(s_keepaliveHeader, 1);
+        if (m_iKeepAlive)
+            add(s_keepaliveHeader, 1);
+        else
+            add(&s_concloseHeader, 1);
     }
-    else
-        add(&s_concloseHeader, 1);
 
     iovec->clear(1);
     const StatusLineString &statusLine = HttpStatusLine::getInstance().getStatusLine(
@@ -1440,7 +1585,6 @@ void HttpRespHeaders::copy(const HttpRespHeaders &headers)
 
 void HttpRespHeaders::copyEx(const HttpRespHeaders &headers)
 {
-    m_flags |= (headers.m_flags & HRH_F_HAS_PUSH);
     m_buf.clear();
     m_buf.append(headers.m_buf.begin(), headers.m_buf.size());
 
@@ -1662,6 +1806,9 @@ void HttpRespHeaders::prepareSendQpack()
     {
     case SC_100:
         hdr->qpack_index = LSQPACK_TNV_STATUS_100;
+        break;
+    case SC_103:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_103;
         break;
     case SC_200:
         hdr->qpack_index = LSQPACK_TNV_STATUS_200;
@@ -2133,11 +2280,6 @@ lsxpack_err_code UpkdRespHdrBuilder::process(lsxpack_header *hdr)
             if (hdr == headers->m_working)
             {
                 headers->commitWorkingHeader();
-                if (hdr->app_index == HttpRespHeaders::H_LINK)
-                {
-                    if (memmem(val, hdr->val_len, "preload", 7) != NULL)
-                        headers->m_flags |= HRH_F_HAS_PUSH;
-                }
             }
             else
                 headers->add((HttpRespHeaders::INDEX)idx, name, hdr->name_len,

@@ -37,6 +37,7 @@ HttpStatusCode::HttpStatusCode()
     m_aSC[code++] = new StatusCode(SC_101, " 101 Switching Protocols\r\n",
                                    NULL);
     m_aSC[code++] = new StatusCode(SC_102, " 102 Processing\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_103, " 103 Early Hints\r\n", NULL);
 
     m_aSC[code++] = new StatusCode(SC_200, " 200 OK\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_201, " 201 Created\r\n", NULL);

@@ -41,11 +41,10 @@ struct http_header_t;
 #define LS_RESP_HDR_DROP (-2)
 
 #define HRH_F_HAS_HOLE  1
-#define HRH_F_HAS_PUSH  2
 #define HRH_F_LC_NAME   4
 
 #define HRH_IDX_NONE    0xFFFF
-#define HRH_MAX_LEN     16384
+#define HRH_MAX_LEN     32767
 
 class HttpRespHeaders
 {
@@ -125,6 +124,8 @@ public:
 
     lsxpack_header *begin()             {   return m_lsxpack.begin();   }
     lsxpack_header *end()               {   return m_lsxpack.end();     }
+
+    int buildEarlyHints(HttpRespHeaders &hints);
 
     void prepareSendXpack(bool is_qpack);
     void prepareSendQpack();
@@ -223,7 +224,6 @@ public:
         del(HttpRespHeaders::H_X_LITESPEED_VARY);
     }
     void copy(const HttpRespHeaders &headers);
-    unsigned char hasPush() const   {   return m_flags & HRH_F_HAS_PUSH;    }
     void addAcceptRanges()
     {   add(HttpRespHeaders::H_ACCEPT_RANGES, "bytes", 5);  }
 

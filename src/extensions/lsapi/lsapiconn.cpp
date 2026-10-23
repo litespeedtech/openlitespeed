@@ -28,6 +28,7 @@
 #include <http/httpdefs.h>
 #include <http/httpextconnector.h>
 #include <http/httpreq.h>
+#include <http/httprespheaders.h>
 #include <http/httpsession.h>
 #include <http/httpstatuscode.h>
 #include <log4cxx/logger.h>
@@ -736,8 +737,7 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
             {
                 LS_WARN(this, "Invalid LSAPI response header count: %d",
                         m_respInfo.m_cntHeaders);
-                errno = EIO;
-                return -1;
+                return getConnector()->respHeaderError(LS_FAIL);
             }
             if (m_respInfo.m_status && m_respInfo.m_status != 200)
             {
@@ -770,6 +770,17 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                     p += 2;
                 }
             }
+            for (int i = 0; i < m_respInfo.m_cntHeaders; ++i)
+            {
+                unsigned int len =
+                    ((unsigned short *)m_respBuf)[i];
+                if (len == 0 || len > HRH_MAX_LEN)
+                {
+                    LS_ERROR(this, "Invalid LSAPI response header length: %u; "
+                             "per-header limit is %d.", len, HRH_MAX_LEN);
+                    return getConnector()->respHeaderError(LS_FAIL);
+                }
+            }
             ++m_respState;
         }
         else
@@ -780,7 +791,8 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
         {
             while (m_iCurRespHeader < m_respInfo.m_cntHeaders)
             {
-                short *p = ((short *)m_respBuf) + m_iCurRespHeader;
+                unsigned short *p =
+                    ((unsigned short *)m_respBuf) + m_iCurRespHeader;
                 int len = *p;
                 if (len > 0)
                 {
@@ -793,23 +805,27 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                         {
                             LS_WARN(this, "Invalid LSAPI partial response header "
                                     "length: %d/%d", partialHeaderLen, len);
-                            errno = EIO;
-                            return -1;
+                            return getConnector()->respHeaderError(LS_FAIL);
                         }
                         if (headerLeft >= remainLen)
                         {
                             char *pHeaderEnd = m_pRespHeaderProcess + remainLen - 1;
                             *pHeaderEnd++ = 0;
-                            getConnector()->appendPartialHeader(
-                                m_pRespHeaderProcess, pHeaderEnd - m_pRespHeaderProcess);
+                            if (getConnector()->appendPartialHeader(
+                                    m_pRespHeaderProcess,
+                                    pHeaderEnd - m_pRespHeaderProcess) < 0)
+                                return getConnector()->respHeaderError(LS_FAIL);
                             m_pRespHeaderProcess = pHeaderEnd;
-                            if (getConnector()->processCompleteRespHeader() == -1)
-                                return -1;
+                            int ret = getConnector()->processCompleteRespHeader();
+                            if (ret < 0)
+                                return getConnector()->respHeaderError(ret);
                         }
                         else
                         {
-                            getConnector()->appendPartialHeader(
-                                m_pRespHeaderProcess, pEnd - m_pRespHeaderProcess);
+                            if (getConnector()->appendPartialHeader(
+                                    m_pRespHeaderProcess,
+                                    pEnd - m_pRespHeaderProcess) < 0)
+                                return getConnector()->respHeaderError(LS_FAIL);
                             m_pRespHeaderProcess = pEnd;
                             return 0;
                         }
@@ -820,16 +836,19 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                         {
                             char *pHeaderEnd = m_pRespHeaderProcess + len - 1;
                             *pHeaderEnd = 0;
-                            if (HttpCgiTool::processHeaderLine(
-                                    getConnector(),
-                                    m_pRespHeaderProcess, pHeaderEnd) == -1)
-                                return -1;
+                            int ret = HttpCgiTool::processHeaderLine(
+                                          getConnector(),
+                                          m_pRespHeaderProcess, pHeaderEnd);
+                            if (ret < 0)
+                                return getConnector()->respHeaderError(ret);
                             m_pRespHeaderProcess += len;
                         }
                         else
                         {
-                            getConnector()->appendPartialHeader(
-                                m_pRespHeaderProcess, pEnd - m_pRespHeaderProcess);
+                            if (getConnector()->appendPartialHeader(
+                                    m_pRespHeaderProcess,
+                                    pEnd - m_pRespHeaderProcess) < 0)
+                                return getConnector()->respHeaderError(LS_FAIL);
                             m_pRespHeaderProcess = pEnd;
                             return 0;
                         }
@@ -839,8 +858,12 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
             }
             status |= HttpReq::HEADER_OK;
             int ret = getConnector()->respHeaderDone();
-            if (ret != 0 && ret != LSI_SUSPEND)
-                return -1;
+            if (ret < 0 && ret != LSI_SUSPEND)
+                return getConnector()->respHeaderError(ret);
+            //Internal redirect: the backend body is not used. Stop reading it,
+            //or it is buffered and flushed to the client over 1MB.
+            if (ret > 0)
+                getConnector()->abortReq();
         }
         ++m_respState;
     }

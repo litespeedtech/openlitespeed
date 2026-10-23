@@ -41,6 +41,7 @@
 #include <extensions/proxy/proxyconfig.h>
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -114,7 +115,7 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
         path = pathBuf;
     }
 
-    int fd = open(path, O_RDONLY);
+    int fd = open(path, O_RDONLY | O_NONBLOCK);
     if (fd == -1)
     {
         LS_INFO("Rewrite file [%s] can not open.", path);
@@ -122,17 +123,36 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
     }
 
     struct stat sb;
-    if (fstat(fd, &sb) == -1) {
+    if (fstat(fd, &sb) == -1)
+    {
         LS_INFO("Rewrite file [%s] cannot be open.", path);
+        close(fd);
+        return LS_FAIL;
+    }
+    if (!S_ISREG(sb.st_mode))
+    {
+        LS_INFO("Rewrite file [%s] is not a regular file.", path);
         close(fd);
         return LS_FAIL;
     }
 
     off_t len = sb.st_size;
+    if (len < 0 || len > SSIZE_MAX)
+    {
+        LS_INFO("Rewrite file [%s] is too large.", path);
+        close(fd);
+        return LS_FAIL;
+    }
     char *buf = new char[len + 1];
     char *p = buf;
     len = read(fd, buf, len);
     close(fd);
+    if (len < 0)
+    {
+        LS_INFO("Rewrite file [%s] cannot be read.", path);
+        delete []buf;
+        return LS_FAIL;
+    }
     buf[len] = 0;
     int ret = parseRules(p, pRuleList, pMaps, pContext);
     delete []buf;
@@ -1257,6 +1277,14 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                     needSet = false;
                     *eef_flags |= EEF_CACHE_KEY_MOD;
                 }
+            }
+            else if (strcasecmp(pKey, "modsecurity") == 0)
+            {
+                //Engine-internal cache-hit ModSecurity bypass flag, must not
+                //be settable from rewrite rules (.htaccess tenants).
+                LS_WARN(pSession, "[REWRITE] Unsafe environment: %s=%s. ignore.",
+                        pKey, pValue);
+                needSet = false;
             }
             else if (strcasecmp(pKey, "http-prio") == 0)
             {

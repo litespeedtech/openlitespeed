@@ -90,7 +90,7 @@ static bool isReqTargetValid(const char *value, int len)
     bool query = false;
     for (; p < end; ++p)
     {
-        if (*p < 0x20 || *p == 0x7f || *p == '#')
+        if (*p < 0x20 || *p == 0x7f)
             return false;
         if (*p == '?')
             query = true;
@@ -409,6 +409,8 @@ HttpReq::HttpReq()
     m_cookies.init();
     m_pUrlStaticFileData = NULL;
     m_pEncodedURI = NULL;
+    m_pLogSession = NULL;
+    m_pILog = NULL;
 }
 
 
@@ -472,6 +474,8 @@ void HttpReq::reset(int discard)
     m_lastStatPath.setStr("");
     m_pUrlStaticFileData = NULL;
     m_pEncodedURI = NULL;
+    m_iBodyType = REQ_BODY_UNKNOWN;
+    m_multipartBodyGuard.reset();
 }
 
 
@@ -573,6 +577,14 @@ int HttpReq::setQS(const char *qs, int qsLen)
 void HttpReq::uSetURI(char *pURI, int uriLen)
 {
     ls_str_set(&m_curUrl.key, pURI, uriLen);
+    //Cached mapping results for the previous URI must not serve the new one.
+    m_pUrlStaticFileData = NULL;
+    m_pRealPath = NULL;
+    if (m_pFMContext)
+    {
+        m_pFMContext = NULL;
+        m_iContextState &= ~CONTEXT_AUTH_CHECKED;
+    }
 }
 
 
@@ -2603,8 +2615,10 @@ int HttpReq::postRewriteProcess(const char *pURI, int len)
     {
         // should skip context processing;
         m_iContextState &= ~PROCESS_CONTEXT;
-        if (pNewCtx != m_pContext)
+        //The rewrite target is a new file, so a prior FilesMatch is stale.
+        if (pNewCtx != m_pContext || m_pFMContext)
             m_iContextState &= ~CONTEXT_AUTH_CHECKED;
+        m_pFMContext = NULL;
         m_pContext = pNewCtx;
         m_pHttpHandler = pNewCtx->getHandler();
         m_pMimeType = NULL;
@@ -2620,6 +2634,7 @@ int HttpReq::postRewriteProcess(const char *pURI, int len)
             if (pContext != m_pContext)
             {
                 m_pContext = pContext;
+                m_iContextState &= ~CONTEXT_AUTH_CHECKED;
                 return 1;
             }
         }
@@ -2696,7 +2711,10 @@ int HttpReq::processContext()
             processMatchList(m_pContext, pURI, iURILen);
     }
     if (m_pContext != pOldCtx)
+    {
+        m_pFMContext = NULL;
         m_iContextState &= ~CONTEXT_AUTH_CHECKED;
+    }
     if (m_pHttpHandler->getType() == HandlerType::HT_PROXY)
         return -2;
     if (m_pHttpHandler->getType() == HandlerType::HT_MODULE
@@ -2833,7 +2851,12 @@ int HttpReq::processURIEx(const char *pURI, int uriLen, int &cacheable)
     }
     if (m_pUrlStaticFileData
         && m_pUrlStaticFileData->tmaccess == DateTime::s_curTime)
+    {
+        //Serve the cached entry; a real path left from before an internal
+        //redirect names another file.
+        m_pRealPath = NULL;
         return 0;
+    }
     else if (m_pContext)
         return processPath(pURI, uriLen, pBuf, pBegin, pEnd, cacheable);
     return 0;
@@ -2994,6 +3017,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
         if (m_pVHost->checkFileChanged(m_pUrlStaticFileData, m_fileStat) == 0)
         {
             m_pUrlStaticFileData->tmaccess = DateTime::s_curTime;
+            m_pRealPath = NULL;
             return 0;
         }
         else
@@ -3041,6 +3065,8 @@ int HttpReq::filesMatch(const char *pEnd)
     {
         assert(!m_pFMContext);
         m_pFMContext = m_pContext->matchFilesContext(p, len);
+        if (m_pFMContext)
+            m_iContextState &= ~CONTEXT_AUTH_CHECKED;
         if ((m_pFMContext) && (m_pFMContext->getConfigBits()& BIT_FORCE_TYPE))
         {
             if (m_pFMContext->getForceType())
@@ -3252,7 +3278,13 @@ void HttpReq::updateBodyType(const char *pHeader, int len)
                     "application/x-www-form-urlencoded", 33) == 0)
         m_iBodyType = REQ_BODY_FORM;
     else if (len >= 19 && strncasecmp(pHeader, "multipart/form-data", 19) == 0)
+    {
         m_iBodyType = REQ_BODY_MULTIPART;
+        if (MultipartBodyGuard::getBlockEnabled())
+            m_multipartBodyGuard.init(
+                pHeader, len,
+                MultipartBodyGuard::getScanLimit());
+    }
 }
 
 
@@ -4671,42 +4703,73 @@ int HttpReq::applyOp(HttpSession *pSession, HttpRespHeaders *pRespHeader,
 }
 
 
-void HttpReq::applyOps(HttpSession * pSession,
+int HttpReq::applyOps(HttpSession * pSession,
                        HttpRespHeaders *pRespHeader,
-                       const HttpHeaderOps *pHeaders, int noInherited)
+                       const HttpHeaderOps *pHeaders, int noInherited,
+                       bool linksOnly)
 {
     const HeaderOp *iter;
     if (!pHeaders)
-        return;
+        return LS_OK;
     if (pRespHeader)
     {
         if (!pHeaders->has_resp_op())
-            return;
+            return LS_OK;
     }
     else
     {
         if (!pHeaders->has_req_op())
-            return;
+            return LS_OK;
     }
     for (iter = pHeaders->begin(); iter < pHeaders->end(); ++iter)
     {
-        if (!noInherited || !iter->isInherited())
-            applyOp(pSession, pRespHeader, iter);
+        if (noInherited && iter->isInherited())
+            continue;
+        if (linksOnly)
+        {
+            if (iter->isReqHeader()
+                || iter->getIndex() != HttpRespHeaders::H_LINK)
+                continue;
+            //An unresolved operation may replace or remove earlier links.
+            //Defer the entire batch until normal header processing.
+            if (iter->isComplexValue() || iter->getEnv())
+                return LS_AGAIN;
+        }
+        applyOp(pSession, pRespHeader, iter);
     }
+    return LS_OK;
+}
+
+
+bool HttpReq::hasLinkHeaderOps() const
+{
+    const HttpHeaderOps *ops;
+    if (getContextState(GLOBAL_VH_CTX) && m_pVHost)
+    {
+        ops = m_pVHost->getRootContext().getHeaderOps();
+        if (ops && ops->hasLinkOp())
+            return true;
+    }
+    ops = m_pContext ? m_pContext->getHeaderOps() : NULL;
+    return ops && ops->hasLinkOp();
 }
 
 
 int HttpReq::applyHeaderOps(HttpSession * pSession,
-                            HttpRespHeaders *pRespHeader)
+                            HttpRespHeaders *pRespHeader, bool linksOnly)
 {
     if (getContextState(GLOBAL_VH_CTX))
     {
         if (m_pVHost && m_pVHost->getRootContext().getHeaderOps())
-            applyOps(pSession, pRespHeader, m_pVHost->getRootContext().getHeaderOps(), 1);
+            if (applyOps(pSession, pRespHeader,
+                         m_pVHost->getRootContext().getHeaderOps(), 1,
+                         linksOnly) != LS_OK)
+                return LS_AGAIN;
     }
     if (m_pContext && m_pContext->getHeaderOps())
     {
-        applyOps(pSession, pRespHeader, m_pContext->getHeaderOps(), 0);
+        return applyOps(pSession, pRespHeader, m_pContext->getHeaderOps(), 0,
+                        linksOnly);
     }
     return 0;
 }

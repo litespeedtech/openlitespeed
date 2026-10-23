@@ -343,6 +343,7 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
 
     memset(&m_iInProcess, 0, (char *)&m_ssl - (char *)(&m_iInProcess));
     m_iov.clear();
+    m_pendingHeaders.clear();
     HttpStats::incIdleConns();
     m_tmToken = NtwkIOLink::getToken();
     if (MultiplexerFactory::getMultiplexer()->add(this,
@@ -1624,8 +1625,35 @@ int NtwkIOLink::sendRespHeaders(HttpRespHeaders *pHeader, send_hdr_flag hdr_flag
 {
     if (pHeader)
     {
-        pHeader->outputNonSpdyHeaders(&m_iov);
-        m_iHeaderToSend = pHeader->getTotalLen();
+        if (!m_iHeaderToSend)
+            m_pendingHeaders.clear();
+        if ((hdr_flag & SHF_MORE_HDRS) || !m_pendingHeaders.empty())
+        {
+            //Informational headers can outlive their temporary header object.
+            //Keep unsent bytes when the final response arrives under backpressure.
+            IOVec vec;
+            pHeader->outputNonSpdyHeaders(&vec);
+            AutoBuf pending;
+            if (pending.reserve(m_iHeaderToSend + pHeader->getTotalLen()) < 0)
+                return LS_FAIL;
+            const struct iovec *p = m_iov.get();
+            const struct iovec *end = p + m_iov.len();
+            for (; p < end; ++p)
+                pending.append((const char *)p->iov_base, p->iov_len);
+            p = vec.get();
+            end = p + vec.len();
+            for (; p < end; ++p)
+                pending.append((const char *)p->iov_base, p->iov_len);
+            m_pendingHeaders.swap(pending);
+            m_iov.clear();
+            m_iov.append(m_pendingHeaders.begin(), m_pendingHeaders.size());
+            m_iHeaderToSend = m_pendingHeaders.size();
+        }
+        else
+        {
+            pHeader->outputNonSpdyHeaders(&m_iov);
+            m_iHeaderToSend = pHeader->getTotalLen();
+        }
     }
     return 0;
 }

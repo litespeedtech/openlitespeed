@@ -913,6 +913,31 @@ class DTblDefBase extends ProductDTblDefBase
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::UIStr('tab_sec'), $attrs, 'name');
     }
 
+    protected function add_S_REQ_THROTTLE($id)
+    {
+        $attrs = [
+            self::NewBoolAttr('enable', DMsg::ALbl('l_enabled'), true, 'reqThrottleEnable'),
+            self::NewIntAttr('maxSlots', DMsg::ALbl('l_reqthrottle_slots'), true, 1, 16, 'reqThrottleMaxSlots'),
+            self::NewIntAttr('maxEntries', DMsg::ALbl('l_reqthrottle_entries'), true, 1, 10000000, 'reqThrottleMaxEntries'),
+            self::NewIntAttr('slotIdle', DMsg::ALbl('l_reqthrottle_idle'), true, 86400, 31536000, 'reqThrottleSlotIdle'),
+            self::NewIntAttr('maxWait', DMsg::ALbl('l_reqthrottle_wait'), true, 0, 86400, 'reqThrottleMaxWait'),
+            self::NewIntAttr('maxQueue', DMsg::ALbl('l_reqthrottle_queue'), true, 0, 1000000, 'reqThrottleMaxQueue'),
+            self::NewSelAttr('rejectAction', DMsg::ALbl('l_reqthrottle_reject'), ['429' => '429', 'drop' => 'drop'], true, 'reqThrottleRejectAction'),
+        ];
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_reqthrottle'), $attrs, 'reqThrottle');
+    }
+
+    protected function add_VT_REQ_THROTTLE($id)
+    {
+        $attrs = [
+            self::NewBoolAttr('enable', DMsg::ALbl('l_enabled'), true, 'reqThrottleEnable'),
+            self::NewIntAttr('maxWait', DMsg::ALbl('l_reqthrottle_wait'), true, 0, 86400, 'reqThrottleMaxWait'),
+            self::NewSelAttr('rejectAction', DMsg::ALbl('l_reqthrottle_reject'), ['429' => '429', 'drop' => 'drop'], true, 'reqThrottleRejectAction'),
+            self::NewBoolAttr('allowInHtaccess', DMsg::ALbl('l_reqthrottle_htaccess'), true, 'reqThrottleAllowInHtaccess'),
+        ];
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_reqthrottle'), $attrs, 'VHreqThrottle');
+    }
+
     protected function add_V_SEC_THROTTLE($id)
     {
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_perclientthrottle'), $this->getThrottleAttrs());

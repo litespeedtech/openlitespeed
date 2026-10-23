@@ -2698,8 +2698,9 @@ struct lsi_api_s
      * @param[in] name - a pointer to the variable name string.
      * @param[in] nameLen - the length of the variable name string.
      * @param[in,out] val - a pointer to the variable value string.
-     * @param[in] maxValLen - the maximum size of the variable value string.
-     * @return the length of the variable value string.
+     * @param[in] maxValLen - the size of the val buffer, including room for
+     * the terminating NUL; at most maxValLen - 1 bytes are copied.
+     * @return the length of the variable value string, excluding the NUL.
      */
     int (*get_req_env)(const lsi_session_t *pSession, const char *name,
                        unsigned int nameLen, char *val, int maxValLen);

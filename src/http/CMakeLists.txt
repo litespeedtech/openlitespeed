@@ -72,6 +72,7 @@ SET(http_STAT_SRCS
    smartsettings.cpp
    httplistener.cpp
    httpresp.cpp
+   multipartbodyguard.cpp
    httpreq.cpp
    httpsession.cpp
    iptogeo2.cpp

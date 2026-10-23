@@ -301,7 +301,8 @@ int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
             else
             {
                 //invalid header id
-                return LS_FAIL;
+                LS_ERROR(this, "Invalid AJP response header ID: %u", id2);
+                return getConnector()->respHeaderError(LS_FAIL);
             }
         }
         else
@@ -321,15 +322,19 @@ int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
         *(p1 - 1) = ':';
         *p1 = ' ';
         *(p1 + 1) = ' ';
-        if (HttpCgiTool::processHeaderLine(
-                getConnector(),
-                pHeaderName, headerNameLen,
-                pHeaderVal, headerValLen) == -1)
-            return LS_FAIL;
+        int ret = HttpCgiTool::processHeaderLine(
+                      getConnector(),
+                      pHeaderName, headerNameLen,
+                      pHeaderVal, headerValLen);
+        if (ret < 0)
+            return getConnector()->respHeaderError(ret);
 
     }
     getConnector()->getRespState() |= HttpReq::HEADER_OK;
-    return getConnector()->respHeaderDone();
+    int ret = getConnector()->respHeaderDone();
+    if (ret < 0 && ret != LSI_SUSPEND)
+        return getConnector()->respHeaderError(ret);
+    return ret;
 }
 
 
@@ -621,4 +626,3 @@ int JConn::sendReqHeader()
     setInProcess(1);
     return 1;
 }
-

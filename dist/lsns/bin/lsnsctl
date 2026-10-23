@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import argparse, subprocess, sys, os, logging, json
+import argparse, subprocess, sys, os, logging, json, pwd
 import common
 from stat import *
 from subprocess import PIPE
@@ -8,7 +8,7 @@ def command_requires_uid(command):
     return command in ['disable-uid', 'enable-uid', 'set-min-uid', 'unmount']
 
 def command_uses_uid(command):
-    return command in ['disable-uid', 'enable-uid', 'list-disabled-uids', 'list-mount', 'set-min-uid', 'unmount']
+    return command in ['disable-uid', 'enable-uid', 'list-disabled-uids', 'list-mount', 'unmount']
 
 def validate_environment():
     if os.getuid() != 0:
@@ -56,14 +56,29 @@ def command_get_min_uid(args):
         logging.info("Minimum UID: %d" % uid)
 
 
-def command_set_min_uid(args, user):
+def get_new_min_uid(param):
+    # Not common.get_user(): its minimum uid check would stop the minimum from ever being lowered
+    try:
+        uid = int(param)
+    except ValueError:
+        try:
+            uid = pwd.getpwnam(param).pw_uid
+        except Exception as err:
+            common.fatal_error('Error getting name for %s: %s' % (param, err))
+    if uid < 1:
+        common.fatal_error('Invalid minimum uid: %s, must be at least 1' % param)
+    return uid
+
+
+def command_set_min_uid(args):
+    uid = get_new_min_uid(args.uid)
     fullfile = common.get_conf_file('lsns.conf')
     try:
         f = open(fullfile, 'w')
     except Exception as err:
         common.fatal_error('Error opening %s: %s' % (fullfile, err))
     try:
-        f.write('%d\n' % user.pw_uid)
+        f.write('%d\n' % uid)
         f.close()
     except Exception as err:
         common.fatal_error('Error writing %s: %s' % (fullfile, err))
@@ -213,7 +228,7 @@ def do_pgm(args, user):
     elif 'list-disabled-uids' == args.command:
         command_list_disabled_uids(args, user)
     elif 'set-min-uid' == args.command:
-        command_set_min_uid(args, user)
+        command_set_min_uid(args)
     elif 'unmount' == args.command or 'unmount-all' == args.command:
         command_unmount(args, user)
     logging.debug("Exiting lsnsctl")

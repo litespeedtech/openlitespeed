@@ -248,12 +248,20 @@ const char *HttpVHost::getAccessLogPath() const
 /*****************************************************************
  * HttpVHost funcitons.
  *****************************************************************/
+int HttpVHost::getEarlyHints() const
+{
+    return m_iEarlyHints < 0 ? HttpServerConfig::getInstance().getEarlyHints()
+                             : m_iEarlyHints;
+}
+
+
 HttpVHost::HttpVHost(const char *pHostName)
     : m_pLogger(NULL)
     , m_pBytesLog(NULL)
     , m_iMaxKeepAliveRequests(100)
     , m_iRewriteLogLevel(0)
     , m_iGlobalMatchContext(1)
+    , m_iEarlyHints(-1)
     , m_iFeatures(VH_ENABLE | VH_SERVER_ENABLE |
                   VH_ENABLE_SCRIPT | LS_ALWAYS_FOLLOW |
                   VH_GZIP)
@@ -285,7 +293,6 @@ HttpVHost::HttpVHost(const char *pHostName)
     m_pUrlStxFileHash = new UrlStxFileHash(30, GHash::hfString,
                                            GHash::cmpString);
 
-    m_pUrlIdHash = new UrlIdHash(64, GHash::hfString, GHash::cmpCiString);
     memset(m_pAccessLog, 0, sizeof(AccessLog *) * MAX_ACCESS_LOG);
 }
 
@@ -320,8 +327,6 @@ HttpVHost::~HttpVHost()
         delete m_pSSLCtx;
     m_pUrlStxFileHash->release_objects();
     delete m_pUrlStxFileHash;
-    m_pUrlIdHash->release_objects();
-    delete m_pUrlIdHash;
     LsiapiBridge::releaseModuleData(LSI_DATA_VHOST, &m_moduleData);
 }
 
@@ -921,6 +926,8 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
 
     enable(ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enabled",
             0, 1, 1));
+    setEarlyHints(ConfigCtx::getCurConfigCtx()->getLongValue(
+                      pVhConfNode, "enableEarlyHints", -1, 2, -1));
     enableGzip((HttpServerConfig::getInstance().getGzipCompress()) ?
                ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableGzip", 0, 1,
                        1) : 0);
@@ -4133,32 +4140,4 @@ void HttpVHost::removeurlStaticFile(static_file_data_t *data)
         m_pUrlStxFileHash->erase(it);
         delete data;
     }
-}
-
-/**
- * return the just assigned id
- */
-int HttpVHost::addUrlToUrlIdHash(const char *url)
-{
-    int size = m_pUrlIdHash->size();
-    url_id_data_t *data = new url_id_data_t;
-    data->id = size;
-    data->url.setStr(url);
-    m_pUrlIdHash->insert(data->url.c_str(), data);
-    return size;
-}
-
-/**
- * return the bit of the url added to the hash
- */
-int HttpVHost::getIdBitOfUrl(const char *url)
-{
-    UrlIdHash::iterator itr = m_pUrlIdHash->find(url);
-    if (itr != m_pUrlIdHash->end())
-    {
-        url_id_data_t *data = itr.second();
-        return data->id;
-    }
-
-    return -1;
 }

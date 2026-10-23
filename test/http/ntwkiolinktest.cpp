@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <poll.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
@@ -57,6 +58,40 @@ static void initProxyTestCache()
         ClientCache::initObjPool();
         initialized = true;
     }
+}
+
+
+TEST(ClientInfoTest_copyHostnameWithExplicitLength)
+{
+    const int hostnameLen = 36;
+    long pageSize = sysconf(_SC_PAGESIZE);
+    CHECK(pageSize > hostnameLen);
+    if (pageSize <= hostnameLen)
+        return;
+
+    char *mapping = (char *)mmap(NULL, pageSize * 2,
+                                 PROT_READ | PROT_WRITE,
+                                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    CHECK(mapping != MAP_FAILED);
+    if (mapping == MAP_FAILED)
+        return;
+    int ret = mprotect(mapping + pageSize, pageSize, PROT_NONE);
+    CHECK_EQUAL(0, ret);
+    if (ret != 0)
+    {
+        munmap(mapping, pageSize * 2);
+        return;
+    }
+
+    char *hostname = mapping + pageSize - hostnameLen;
+    memset(hostname, 'a', hostnameLen);
+    ClientInfo info;
+    info.setHostName(hostname, hostnameLen);
+    CHECK_EQUAL(hostnameLen, info.getHostNameLen());
+    CHECK_EQUAL(0, memcmp(hostname, info.getHostName(), hostnameLen));
+    CHECK_EQUAL(0, info.getHostName()[hostnameLen]);
+
+    CHECK_EQUAL(0, munmap(mapping, pageSize * 2));
 }
 
 

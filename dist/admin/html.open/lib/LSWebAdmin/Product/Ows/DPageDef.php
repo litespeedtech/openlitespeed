@@ -29,6 +29,7 @@ class DPageDef extends ProductDPageDefBase
 			new DTblMap(['security:accessDenyDir', 'accessDenyDir' ], 'S_SEC_DENY'),
 			new DTblMap(['security:accessControl', 'accessControl' ], 'SVT_SEC_AC'),
             new DTblMap('lsrecaptcha', 'S_SEC_RECAP'),
+            new DTblMap('reqThrottle', 'S_REQ_THROTTLE'),
 			new DTblMap(['extProcessorList:*extProcessor', '*extprocessor$name' ], 'SV_EXT_SEL'),
 			new DTblMap(['scriptHandlerList', 'scripthandler' ], new DTblMap(['*scriptHandler', '*addsuffix$suffix' ], 'SVT_SCRIPT')),
 			new DTblMap(['modpagespeed', 'modpagespeed'], 'S_PAGESPEED'),
@@ -64,6 +65,7 @@ class DPageDef extends ProductDPageDefBase
                     new DTblMap(['security:accessControl','accessControl'], 'SVT_SEC_AC'),
                     new DTblMap(['security:realmList:*realm','*realm$name'], 'V_REALM_FILE'),
                     new DTblMap('lsrecaptcha', 'VT_SEC_RECAP'),
+                    new DTblMap('reqThrottle', 'VT_REQ_THROTTLE'),
                     new DTblMap(['security',''], 'VT_SEC_BUBBLEWRAP'),
                     new DTblMap(['extProcessorList:*extProcessor','*extprocessor$name'], 'SV_EXT_SEL'),
                     new DTblMap(['contextList:*context', '*context$uri'], 'VT_CTX_SEL'),
@@ -108,6 +110,7 @@ class DPageDef extends ProductDPageDefBase
                                 new DTblMap(['security:accessControl','accessControl'], 'SVT_SEC_AC'),
                                 new DTblMap(['security:realmList:*realm','*realm$name'], 'T_REALM_FILE'),
                                 new DTblMap('lsrecaptcha', 'VT_SEC_RECAP'),
+                                new DTblMap('reqThrottle', 'VT_REQ_THROTTLE'),
                                 new DTblMap(['security', ''], 'VT_SEC_BUBBLEWRAP'),
                                 new DTblMap(['extProcessorList:*extProcessor','*extprocessor$name'], 'T_EXT_SEL'),
                                 new DTblMap(['contextList:*context', '*context$uri'], 'VT_CTX_SEL'),
@@ -166,6 +169,7 @@ class DPageDef extends ProductDPageDefBase
 						new DTblMap('perClientConnLimit', 'S_SEC_CONN'),
 						new DTblMap('CGIRLimit', 'S_SEC_CGI'),
                         new DTblMap('lsrecaptcha', 'S_SEC_RECAP'),
+                        new DTblMap('reqThrottle', 'S_REQ_THROTTLE'),
                         'S_SEC_BUBBLEWRAP',
 						new DTblMap('accessDenyDir', 'S_SEC_DENY'),
 						new DTblMap('accessControl', 'SVT_SEC_AC')]));
@@ -273,6 +277,7 @@ class DPageDef extends ProductDPageDefBase
         $id = 'sec';
 		$page = new DPage($id, DMsg::UIStr('tab_sec'), new DTblMap('',
 				[ new DTblMap('lsrecaptcha', 'VT_SEC_RECAP'),
+                  new DTblMap('reqThrottle', 'VT_REQ_THROTTLE'),
                   'VT_SEC_BUBBLEWRAP',
                   new DTblMap('accessControl', 'SVT_SEC_AC'),
 				  new DTblMap('*realm$name', 'V_REALM_TOP', 'V_REALM_FILE')],
@@ -283,6 +288,7 @@ class DPageDef extends ProductDPageDefBase
 				['T_SEC_FILE', 'T_SEC_CONN', 'T_SEC_CGI',
 						new DTblMap('virtualHostConfig',
 								[new DTblMap('lsrecaptcha', 'VT_SEC_RECAP'),
+                                    new DTblMap('reqThrottle', 'VT_REQ_THROTTLE'),
                                     'VT_SEC_BUBBLEWRAP',
                                     new DTblMap('accessControl', 'SVT_SEC_AC'),
 										new DTblMap('*realm$name', 'T_REALM_TOP', 'T_REALM_FILE')])]));

@@ -32,6 +32,7 @@
 #include <util/objpool.h>
 #include <util/staticobj.h>
 
+#include <limits.h>
 #include <unistd.h>
 
 Ip2Geo *ClientCache::s_ip2geo = NULL;
@@ -395,28 +396,28 @@ static int addrlookupCb(void *arg, const long length, void *hosts)
     if (!pInfo )
         return 0;
 
-    if (hosts && length > 0)
+    if (hosts && length > 0 && length <= INT_MAX)
     {
-        LS_DBG_H( "DNS reverse lookup: [%s]: %s",
-                  pInfo->getAddrString(), (char *)hosts );
-
         //Just use the first result for now
-        char *pHost1End = (char *)memchr(hosts, ',', (size_t)length);
-        if (pHost1End)
-        {
-            *pHost1End = 0x00; //Terminate the first ',', so only use the first one
-        }
-        pInfo->setHostName( (char *)hosts );
+        const char *pHost1End = (const char *)memchr(hosts, ',',
+                                                     (size_t)length);
+        int hostLen = pHost1End
+                      ? (int)(pHost1End - (const char *)hosts)
+                      : (int)length;
+        LS_DBG_H("DNS reverse lookup: [%s]: %.*s",
+                 pInfo->getAddrString(), hostLen, (const char *)hosts);
+        pInfo->setHostName((const char *)hosts, hostLen);
     }
     else
     {
         LS_DBG_H( "Failed to lookup [%s]\n", pInfo->getAddrString());
-        pInfo->setHostName( NULL );
+        pInfo->setHostName(NULL, 0);
     }
     if ((pInfo->isNeedTestHost()) && (type = pInfo->checkHost()) != 0)
     {
         int ipLen = 0;
-        LS_DBG_H( "Need to test the host %.*s", (int)length, (char *)hosts);
+        LS_DBG_H("Need to test the host %.*s", pInfo->getHostNameLen(),
+                 pInfo->getHostName());
         type = pInfo->getAddr()->sa_family;
         const char *pIp = Adns::getInstance().getHostByNameInCache(
             pInfo->getHostName(), ipLen, type);
@@ -520,4 +521,3 @@ ClientInfo *ClientCache::getClientInfo(const struct sockaddr *pPeer)
     pInfo->hit(DateTime::s_curTime);
     return pInfo;
 }
-

@@ -26,6 +26,7 @@
 #include <http/httpmethod.h>
 #include <http/httpserverconfig.h>
 #include <http/httpvhost.h>
+#include <http/staticfilecachedata.h>
 #include <h2/unpackedheaders.h>
 #include <lshpack/lshpack.h>
 #include <log4cxx/logsession.h>
@@ -1082,6 +1083,175 @@ SUITE(HttpReqTest)
         CHECK_EQUAL(0, req.getContextState(CONTEXT_AUTH_CHECKED));
     }
 
+    TEST(HttpReqTest_recheckAuthAfterUriRewriteContextChange)
+    {
+        HttpVHost vhost("rewrite-uri-auth-context-test");
+        HttpContext *source = vhost.addContext(
+                                  "/adir/", HandlerType::HT_NULL,
+                                  "/srv/adir/", NULL, 1);
+        HttpContext *target = vhost.addContext(
+                                  "/protected/", HandlerType::HT_NULL,
+                                  "/srv/protected/", NULL, 1);
+        CHECK(source != NULL);
+        CHECK(target != NULL);
+
+        HttpReqTst req;
+        req.appendLogId("recheckAuthAfterUriRewriteContextChange");
+        req.reset(0);
+        req.setVHost(&vhost);
+        req.setContext(source);
+        req.orContextState(CONTEXT_AUTH_CHECKED);
+
+        const char sameContext[] = "/adir/resource";
+        CHECK_EQUAL(0, req.postRewriteProcess(sameContext,
+                                              sizeof(sameContext) - 1));
+        CHECK_EQUAL(source, req.getContext());
+        CHECK(req.getContextState(CONTEXT_AUTH_CHECKED));
+
+        const char rewritten[] = "/protected/resource";
+        CHECK_EQUAL(1, req.postRewriteProcess(rewritten,
+                                              sizeof(rewritten) - 1));
+        CHECK_EQUAL(target, req.getContext());
+        CHECK_EQUAL(0, req.getContextState(CONTEXT_AUTH_CHECKED));
+    }
+
+    TEST(HttpReqTest_recheckAuthAfterFilesMatchContextChange)
+    {
+        HttpVHost vhost("files-match-auth-context-test");
+        HttpContext *fileContext = new HttpContext();
+        CHECK(fileContext != NULL);
+        CHECK_EQUAL(0, fileContext->setFilesMatch("secret.txt", 0));
+        CHECK_EQUAL(0, vhost.getRootContext().addFilesMatchContext(
+                           fileContext));
+
+        HttpReqTst req;
+        req.appendLogId("recheckAuthAfterFilesMatchContextChange");
+        req.reset(0);
+        req.setContext(&vhost.getRootContext());
+        req.orContextState(CONTEXT_AUTH_CHECKED);
+
+        const char path[] = "/secret.txt";
+        CHECK_EQUAL(0, req.testFilesMatch(path + sizeof(path) - 1));
+        CHECK_EQUAL(fileContext, req.getFMContext());
+        CHECK_EQUAL(0, req.getContextState(CONTEXT_AUTH_CHECKED));
+
+        req.orContextState(CONTEXT_AUTH_CHECKED);
+        const char rewritten[] = "/public.txt";
+        CHECK_EQUAL(0, req.setCurrentURL(rewritten,
+                                        sizeof(rewritten) - 1, 1));
+        CHECK(req.getFMContext() == NULL);
+        CHECK_EQUAL(0, req.getContextState(CONTEXT_AUTH_CHECKED));
+    }
+
+    TEST(HttpReqTest_dropFilesMatchContextOnContextChange)
+    {
+        ProxyContextTestHandler proxyHandler;
+        HttpVHost vhost("files-match-context-change-test");
+        HttpContext *source = vhost.addContext(
+                                  "/adir/longname/", HandlerType::HT_NULL,
+                                  "/srv/adir/longname/", NULL, 1);
+        HttpContext *target = vhost.addContext(
+                                  "/b/", HandlerType::HT_NULL,
+                                  "/srv/b/", NULL, 1);
+        CHECK(source != NULL);
+        CHECK(target != NULL);
+        target->setHandler(&proxyHandler);
+        HttpContext *fileContext = new HttpContext();
+        CHECK(fileContext != NULL);
+        CHECK_EQUAL(0, fileContext->setFilesMatch("secret.txt", 0));
+        CHECK_EQUAL(0, source->addFilesMatchContext(fileContext));
+
+        HttpReqTst req;
+        req.appendLogId("dropFilesMatchContextOnContextChange");
+        req.reset(0);
+        req.setVHost(&vhost);
+        req.setContext(source);
+
+        //A rewrite outside the current context matches files against the
+        //old context before the new context is selected.
+        const char rewritten[] = "/b/secret.txt";
+        CHECK_EQUAL(1, req.postRewriteProcess(rewritten,
+                                              sizeof(rewritten) - 1));
+        CHECK_EQUAL(source, req.getContext());
+        CHECK_EQUAL(fileContext, req.getFMContext());
+
+        req.orContextState(CONTEXT_AUTH_CHECKED);
+        CHECK_EQUAL(-2, req.processContext());
+        CHECK_EQUAL(target, req.getContext());
+        CHECK(req.getFMContext() == NULL);
+        CHECK_EQUAL(0, req.getContextState(CONTEXT_AUTH_CHECKED));
+
+        const char path[] = "/secret.txt";
+        req.setContext(source);
+        CHECK_EQUAL(0, req.testFilesMatch(path + sizeof(path) - 1));
+        CHECK_EQUAL(fileContext, req.getFMContext());
+        req.setContext(source);
+        CHECK_EQUAL(fileContext, req.getFMContext());
+        req.setContext(target);
+        CHECK(req.getFMContext() == NULL);
+    }
+
+    TEST(HttpReqTest_recheckAuthAfterSetContextChange)
+    {
+        HttpVHost vhost("set-context-auth-test");
+        HttpContext *parent = vhost.addContext(
+                                  "/adir/", HandlerType::HT_NULL,
+                                  "/srv/adir/", NULL, 1);
+        HttpContext *child = vhost.addContext(
+                                 "/adir/sub/", HandlerType::HT_NULL,
+                                 "/srv/adir/sub/", NULL, 1);
+        CHECK(parent != NULL);
+        CHECK(child != NULL);
+
+        HttpReqTst req;
+        req.appendLogId("recheckAuthAfterSetContextChange");
+        req.reset(0);
+        req.setVHost(&vhost);
+        req.setContext(child);
+        req.orContextState(CONTEXT_AUTH_CHECKED);
+
+        req.setContext(child);
+        CHECK(req.getContextState(CONTEXT_AUTH_CHECKED));
+
+        //A [P] rule inherited from an ancestor switches to that context, and
+        //its AAA must be checked even if the child was already authorized.
+        req.setContext(parent);
+        CHECK_EQUAL(parent, req.getContext());
+        CHECK_EQUAL(0, req.getContextState(CONTEXT_AUTH_CHECKED));
+    }
+
+    TEST(HttpReqTest_dropFilesMatchContextOnFilePathRewrite)
+    {
+        HttpVHost vhost("files-match-file-path-rewrite-test");
+        HttpContext *source = vhost.addContext(
+                                  "/adir/", HandlerType::HT_NULL,
+                                  "/srv/adir/", NULL, 1);
+        CHECK(source != NULL);
+        HttpContext *fileContext = new HttpContext();
+        CHECK(fileContext != NULL);
+        CHECK_EQUAL(0, fileContext->setFilesMatch("public.txt", 0));
+        CHECK_EQUAL(0, source->addFilesMatchContext(fileContext));
+
+        HttpReqTst req;
+        req.appendLogId("dropFilesMatchContextOnFilePathRewrite");
+        req.reset(0);
+        req.setVHost(&vhost);
+        req.setContext(source);
+
+        const char path[] = "/adir/public.txt";
+        CHECK_EQUAL(0, req.testFilesMatch(path + sizeof(path) - 1));
+        CHECK_EQUAL(fileContext, req.getFMContext());
+        req.orContextState(CONTEXT_AUTH_CHECKED);
+
+        //Same context, different file: the FilesMatch rules no longer apply.
+        const char rewritten[] = "/srv/adir/secret.txt";
+        CHECK_EQUAL(0, req.postRewriteProcess(rewritten,
+                                              sizeof(rewritten) - 1));
+        CHECK_EQUAL(source, req.getContext());
+        CHECK(req.getFMContext() == NULL);
+        CHECK_EQUAL(0, req.getContextState(CONTEXT_AUTH_CHECKED));
+    }
+
     TEST(HttpReqTest_recheckAuthBeforeProxyContextReturn)
     {
         ProxyContextTestHandler proxyHandler;
@@ -1227,17 +1397,53 @@ SUITE(HttpReqTest)
         }
     }
 
-    TEST(HttpReqTest_rejectFragmentInRequestTarget)
+    TEST(HttpReqTest_allowRawHashInRequestPath)
     {
-        const char invalid[] =
+        const char input[] =
             "GET /public#private HTTP/1.1\r\n"
             "Host: example.com\r\n"
             "\r\n";
         HttpReqTst req;
-        req.appendLogId("rejectFragmentInRequestTarget");
+        req.appendLogId("allowRawHashInRequestPath");
         req.reset(0);
         req.setVHost((HttpVHost *)1);
-        CHECK_EQUAL(SC_400, req.append(invalid, sizeof(invalid) - 1));
+        CHECK_EQUAL(0, req.append(input, sizeof(input) - 1));
+        CHECK_EQUAL("/public#private", req.getURI());
+    }
+
+    TEST(HttpReqTest_preserveRawHashInProxyQuery)
+    {
+        const char *requests[] =
+        {
+            "GET /upload.php?ID=ExampleUser&PASSWORD=abc#123&temp=12.3 HTTP/1.1\r\n"
+            "Host: example.com\r\n\r\n",
+            "GET http://example.com/upload.php?ID=ExampleUser&PASSWORD=abc#123&temp=12.3 HTTP/1.1\r\n"
+            "Host: example.com\r\n\r\n"
+        };
+        for (unsigned i = 0; i < sizeof(requests) / sizeof(requests[0]); ++i)
+        {
+            HttpReqTst req;
+            req.appendLogId("preserveRawHashInProxyQuery");
+            req.reset(0);
+            req.setVHost((HttpVHost *)1);
+            CHECK_EQUAL(0, req.append(requests[i], strlen(requests[i])));
+            CHECK_EQUAL("/upload.php", req.getURI());
+            CHECK_EQUAL("ID=ExampleUser&PASSWORD=abc#123&temp=12.3",
+                        req.getQueryString());
+
+            int len = 0;
+            const char *line = req.encodeProxyReqLine(len);
+            if (i == 0)
+            {
+                CHECK(line == NULL);
+                CHECK_EQUAL(0, len);
+                line = req.getOrgReqLine();
+                len = req.getOrgReqLineLen() - 9;
+            }
+            const char expected[] =
+                "GET /upload.php?ID=ExampleUser&PASSWORD=abc#123&temp=12.3";
+            CHECK_EQUAL(std::string(expected), std::string(line, len));
+        }
     }
 
     TEST(HttpReqTest_rejectBackslashInRequestPath)
@@ -1362,13 +1568,16 @@ SUITE(HttpReqTest)
         CHECK_EQUAL("/target", req.getURI());
         CHECK_EQUAL("next=../admin&raw=%GG", req.getQueryString());
 
+        const char hash[] = "/safe#fragment";
+        CHECK_EQUAL(0, req.setCurrentURL(hash, sizeof(hash) - 1, 1));
+        CHECK_EQUAL(hash, req.getURI());
+
         const char *invalid[] =
         {
             "/../../secret",
             "/safe/%2e%2e/%2e%2e/secret",
             "/safe%5c../secret",
             "/safe%0dpath",
-            "/safe#fragment",
             "/safe/%GG"
         };
         for (unsigned i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
@@ -1502,6 +1711,40 @@ SUITE(HttpReqTest)
         CHECK_EQUAL(0, req.locationToUrl(doubleEncoded,
                                          sizeof(doubleEncoded) - 1));
         CHECK_EQUAL("/errors/%252e%252e/secret", req.getLocation());
+    }
+
+    TEST(HttpReqTest_dropUrlStaticFileCacheOnRedirect)
+    {
+        //Declared before the vhost, which drops its reference on destruction.
+        StaticFileCacheData data;
+        HttpVHost vhost("url-static-cache-redirect-test");
+        const char url[] = "/acl-test/secret.txt";
+        vhost.addUrlStaticFileMatch(&data, url, sizeof(url) - 1);
+
+        const char request[] =
+            "GET /acl-test/secret.txt HTTP/1.1\r\n"
+            "Host: example.com\r\n\r\n";
+        HttpReqTst req;
+        req.appendLogId("dropUrlStaticFileCacheOnRedirect");
+        req.reset(0);
+        req.setVHost(&vhost);
+        CHECK_EQUAL(0, req.append(request, sizeof(request) - 1));
+        req.checkUrlStaicFileCache();
+        CHECK(req.getUrlStaticFileData() != NULL);
+        req.setRealPath("/tmp/secret.txt", 15);
+        CHECK(req.getRealPath() != NULL);
+
+        //e.g. a custom 403 page after access control denied the request
+        const char errorPage[] = "/error403.html";
+        CHECK_EQUAL(0, req.internalRedirectURI(errorPage,
+                                                sizeof(errorPage) - 1));
+        CHECK(req.getUrlStaticFileData() == NULL);
+        CHECK(req.getRealPath() == NULL);
+        CHECK_EQUAL(errorPage, req.getUrlStaticFileCacheKey());
+        CHECK_EQUAL((int)sizeof(errorPage) - 1,
+                    req.getUrlStaticFileCacheKeyLen());
+        req.checkUrlStaicFileCache();
+        CHECK(req.getUrlStaticFileData() == NULL);
     }
 }
 

@@ -27,6 +27,7 @@
 #include <util/dlinkqueue.h>
 #include <log4cxx/logsession.h>
 #include <util/iovec.h>
+#include <util/autobuf.h>
 
 #include <sys/types.h>
 #include <lsiapi/internal.h>
@@ -117,12 +118,17 @@ private:
 
     short               m_hasBufferedData;
     IOVec               m_iov;
+    AutoBuf             m_pendingHeaders;
     DLinkQueue          m_aioSFQ;
 
 
 
 public:
     short               hasBufferedData()   {   return m_hasBufferedData; }
+#ifdef RUN_TEST
+    const IOVec &testHeaderIov() const { return m_iov; }
+    const AutoBuf &testPendingHeaders() const { return m_pendingHeaders; }
+#endif
 
 private:
     NtwkIOLink(const NtwkIOLink &rhs);

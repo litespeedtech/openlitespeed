@@ -607,7 +607,8 @@ int StaticFileHandler::process(HttpSession *pSession,
         {
             HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
             host->addUrlStaticFileMatch(pInfo->getFileData(),
-                                        pReq->getOrgReqURL(), pReq->getOrgReqURLLen());
+                                        pReq->getUrlStaticFileCacheKey(),
+                                        pReq->getUrlStaticFileCacheKeyLen());
             LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
         }
         else

@@ -21,12 +21,203 @@
 #include <http/httpcgitool.h>
 #include <http/httpdefs.h>
 #include <http/handlertype.h>
+#include <http/hiostream.h>
 #include <http/httprespheaders.h>
+#include <http/httpserverconfig.h>
 #include <http/httpsession.h>
 #include <http/httpvhost.h>
 #include "unittest-cpp/UnitTest++.h"
 
+#include <errno.h>
 #include <string.h>
+#include <string>
+
+
+class CgiToolTestStream : public HioStream
+{
+public:
+    int read(char *, int)                         { return 0; }
+    int write(const char *, int size)              { return size; }
+    int writev(const struct iovec *, int)           { return 0; }
+    int flush()                                     { return 0; }
+    int close()                                     { return 0; }
+    void suspendRead()                              {}
+    void continueRead()                             {}
+    void suspendWrite()                             {}
+    void continueWrite()                            {}
+    int sendRespHeaders(HttpRespHeaders *, send_hdr_flag) { return 0; }
+    void switchWriteToRead()                        {}
+
+protected:
+    const char *buildLogId()                        { return "cgi-tool-test"; }
+};
+
+
+static int processTestHeader(HttpExtConnector *connector,
+                             const std::string &value)
+{
+    return HttpCgiTool::processHeaderLine(
+        connector, HttpRespHeaders::H_HEADER_END, "X-Large", 7,
+        value.data(), value.size());
+}
+
+
+TEST(HttpCgiToolTest_dynamicResponseFieldHardLimit)
+{
+    HttpServerConfig &config = HttpServerConfig::getInstance();
+    uint32_t savedLimit = config.getMaxDynRespHeaderLen();
+    const int rejected = HttpCgiTool::RESP_HEADER_ERR_SET;
+    config.setMaxDynRespHeaderLen(MAX_DYN_RESP_HEADER_LEN);
+    std::string accepted(HRH_MAX_LEN - 7 - 4, 'a');
+
+    HttpSession acceptedSession;
+    HttpExtConnector acceptedConnector;
+    acceptedConnector.setHttpSession(&acceptedSession);
+    CHECK_EQUAL(LS_OK, processTestHeader(&acceptedConnector, accepted));
+
+    CgiToolTestStream rejectedStream;
+    HttpSession rejectedSession;
+    rejectedSession.attachStream(&rejectedStream);
+    HttpExtConnector rejectedConnector;
+    rejectedConnector.setHttpSession(&rejectedSession);
+    accepted.push_back('a');
+    CHECK_EQUAL(rejected, processTestHeader(&rejectedConnector, accepted));
+    CHECK_EQUAL(SC_500, rejectedSession.getReq()->getStatusCode());
+    CHECK((rejectedConnector.getState()
+           & (HEC_ABORT_REQUEST | HEC_ERROR))
+          == (HEC_ABORT_REQUEST | HEC_ERROR));
+    CHECK(!rejectedConnector.isRecoverable());
+    config.setMaxDynRespHeaderLen(savedLimit);
+}
+
+
+TEST(HttpCgiToolTest_dynamicResponseFieldUsesConfiguredLimit)
+{
+    HttpServerConfig &config = HttpServerConfig::getInstance();
+    uint32_t savedLimit = config.getMaxDynRespHeaderLen();
+    const int rejected = HttpCgiTool::RESP_HEADER_ERR_SET;
+    const uint32_t configuredLimit = 4096;
+    config.setMaxDynRespHeaderLen(configuredLimit);
+    std::string accepted(configuredLimit - 7 - 4, 'a');
+
+    HttpSession acceptedSession;
+    HttpExtConnector acceptedConnector;
+    acceptedConnector.setHttpSession(&acceptedSession);
+    CHECK_EQUAL(LS_OK, processTestHeader(&acceptedConnector, accepted));
+
+    CgiToolTestStream rejectedStream;
+    HttpSession rejectedSession;
+    rejectedSession.attachStream(&rejectedStream);
+    HttpExtConnector rejectedConnector;
+    rejectedConnector.setHttpSession(&rejectedSession);
+    accepted.push_back('a');
+    CHECK_EQUAL(rejected, processTestHeader(&rejectedConnector, accepted));
+    CHECK_EQUAL(SC_500, rejectedSession.getReq()->getStatusCode());
+    CHECK(!rejectedConnector.isRecoverable());
+    config.setMaxDynRespHeaderLen(savedLimit);
+}
+
+
+//LSAPI-style call: a complete header line passed directly to the parser.
+static int processTestLine(HttpExtConnector *connector, const char *line)
+{
+    return HttpCgiTool::processHeaderLine(connector, line,
+                                          line + strlen(line));
+}
+
+
+TEST(HttpCgiToolTest_directHeaderFailureIsNotRecoverable)
+{
+    CgiToolTestStream stream;
+    HttpSession session;
+    session.attachStream(&stream);
+    session.getResp()->setContentLen(LSI_BODY_SIZE_UNKNOWN);
+    HttpExtConnector connector;
+    connector.setHttpSession(&session);
+
+    int ret = processTestLine(&connector, "Content-Length: abc");
+    CHECK_EQUAL(LS_FAIL, ret);
+    CHECK(connector.isRecoverable());
+    errno = 0;
+    CHECK_EQUAL(LS_FAIL, connector.respHeaderError(ret));
+    CHECK_EQUAL(EPROTO, errno);
+    CHECK_EQUAL(SC_500, session.getReq()->getStatusCode());
+    CHECK((connector.getState() & (HEC_ABORT_REQUEST | HEC_ERROR))
+          == (HEC_ABORT_REQUEST | HEC_ERROR));
+    CHECK(!connector.isRecoverable());
+}
+
+
+TEST(HttpCgiToolTest_directHeaderStatus444KeepsDrop)
+{
+    CgiToolTestStream stream;
+    HttpSession session;
+    session.attachStream(&stream);
+    HttpExtConnector connector;
+    connector.setHttpSession(&session);
+
+    int ret = processTestLine(&connector, "Status: 444");
+    CHECK_EQUAL(LS_FAIL, ret);
+    CHECK_EQUAL(HSS_DROP, session.getState());
+    errno = 0;
+    CHECK_EQUAL(LS_FAIL, connector.respHeaderError(ret));
+    CHECK_EQUAL(EPROTO, errno);
+    CHECK_EQUAL(HSS_DROP, session.getState());
+    CHECK(connector.getState() & HEC_ABORT_REQUEST);
+    CHECK(!(connector.getState() & HEC_ERROR));
+    CHECK(!connector.isRecoverable());
+}
+
+
+TEST(HttpCgiToolTest_streamHeaderStatus444KeepsDrop)
+{
+    CgiToolTestStream stream;
+    HttpSession session;
+    session.attachStream(&stream);
+    HttpExtConnector connector;
+    connector.setHttpSession(&session);
+    const char response[] = "Status: 444\r\n\r\n";
+    const char *p = response;
+    int len = sizeof(response) - 1;
+
+    errno = 0;
+    CHECK_EQUAL(LS_FAIL, connector.parseHeader(p, len));
+    CHECK_EQUAL(EPROTO, errno);
+    CHECK_EQUAL(HSS_DROP, session.getState());
+    CHECK(connector.getState() & HEC_ABORT_REQUEST);
+    CHECK(!(connector.getState() & HEC_ERROR));
+    CHECK(!connector.isRecoverable());
+}
+
+
+TEST(HttpCgiToolTest_redirectIsNotRecoverable)
+{
+    HttpExtConnector connector;
+    connector.setState(HEC_REDIRECT);
+    CHECK(!connector.isRecoverable());
+}
+
+
+TEST(HttpCgiToolTest_directHeaderKeepsSelectedResponse)
+{
+    HttpServerConfig &config = HttpServerConfig::getInstance();
+    int64_t savedLimit = config.getMaxDynRespLen();
+    const int rejected = HttpCgiTool::RESP_HEADER_ERR_SET;
+    config.setMaxDynRespLen(4096);
+    CgiToolTestStream stream;
+    HttpSession session;
+    session.attachStream(&stream);
+    session.getResp()->setContentLen(LSI_BODY_SIZE_UNKNOWN);
+    HttpExtConnector connector;
+    connector.setHttpSession(&session);
+
+    int ret = processTestLine(&connector, "Content-Length: 4097");
+    CHECK_EQUAL(rejected, ret);
+    CHECK_EQUAL(LS_FAIL, connector.respHeaderError(ret));
+    CHECK_EQUAL(SC_413, session.getReq()->getStatusCode());
+    CHECK(!connector.isRecoverable());
+    config.setMaxDynRespLen(savedLimit);
+}
 
 
 TEST(HttpCgiToolTest_doNotHonorProxyInternalLocation)

@@ -125,7 +125,7 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
     else
     {
         if (m_respHeaderBuf.append(pBuf, len) < 0)
-            return LS_FAIL;
+            return respHeaderError(LS_FAIL);
         bufLen = m_respHeaderBuf.size();
         pWBuf = m_respHeaderBuf.begin();
     }
@@ -155,11 +155,7 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
         }
     }
     else if (ret < 0)
-    {
-        if (ret != HttpCgiTool::RESP_HEADER_ERR_SET)
-            errResponse(SC_500, NULL);
-        return LS_FAIL;
-    }
+        return respHeaderError(ret);
     if (!(m_iRespState & 0xff))
         pendingHeaderSize = empty ? len : m_respHeaderBuf.size();
     maxDynRespHeaderLen =
@@ -167,12 +163,13 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
     if (m_iRespHeaderSize > maxDynRespHeaderLen
         || pendingHeaderSize > maxDynRespHeaderLen - m_iRespHeaderSize)
     {
-        LS_WARN(getLogger(), "The size of dynamic response header: %llu is"
-                " over the limit.",
-                (unsigned long long)m_iRespHeaderSize + pendingHeaderSize);
+        LS_ERROR(getLogger(), "The size of dynamic response header: %llu is"
+                 " over the limit.",
+                 (unsigned long long)m_iRespHeaderSize + pendingHeaderSize);
         //abortReq(5);
         abortReq();
         errResponse(SC_500, NULL);
+        errno = EPROTO;
         return LS_FAIL;
     }
     if (m_iRespState & 0xff)
@@ -180,7 +177,11 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
     else
     {
         if (empty && len > 0)
+        {
             ret = m_respHeaderBuf.append(pBuf, len);
+            if (ret < 0)
+                return respHeaderError(ret);
+        }
     }
 
     return ret;
@@ -202,6 +203,22 @@ int  HttpExtConnector::respHeaderDone()
             m_iRespState |= HEC_RESP_NOBUFFER;
     }
     return ret;
+}
+
+
+//Size and content-length rejections already selected a response. Other header
+//failures get a 500 unless "Status: 444" is dropping the client. Abort so the
+//request is not retried.
+int HttpExtConnector::respHeaderError(int ret)
+{
+    if (ret != HttpCgiTool::RESP_HEADER_ERR_SET)
+    {
+        abortReq();
+        if (m_pSession && m_pSession->getState() != HSS_DROP)
+            errResponse(SC_500, NULL);
+    }
+    errno = EPROTO;
+    return LS_FAIL;
 }
 
 
@@ -656,7 +673,8 @@ int HttpExtConnector::onRead(HttpSession *pSession)
 
 bool HttpExtConnector::isRecoverable()
 {
-    if (m_iState & HEC_FWD_RESP_BODY)
+    if (m_iState & (HEC_ABORT_REQUEST | HEC_ERROR | HEC_FWD_RESP_BODY
+                    | HEC_REDIRECT))
         return false;
     //if ( m_iReqBodySent == 0 )
     //    return true;
@@ -784,6 +802,3 @@ void HttpExtConnector::setHttpError(int error)
 {
     errResponse(error, NULL);
 }
-
-
-

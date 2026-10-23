@@ -30,6 +30,7 @@ enum
     SC_100 = 1,
     SC_101 ,
     SC_102 ,
+    SC_103 ,
 
     SC_200 ,
     SC_201 ,
@@ -151,6 +152,7 @@ public:
         _100_Continue ,
         _101_Switching_Protocols = 101,
         _102_Processing = 102,
+        _103_Early_Hints = 103,
         _200_OK = 200,
         _201_Created = 201,
         _202_Accepted = 202,

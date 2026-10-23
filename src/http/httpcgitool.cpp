@@ -51,11 +51,10 @@
 #include <openssl/x509.h>
 #include <ctype.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <config.h>
-
-#include <limits>
 
 static int parseRespContentLength(const char *pValue, int valLen,
                                   off_t &contentLen)
@@ -70,12 +69,35 @@ static int parseRespContentLength(const char *pValue, int valLen,
         if (!isdigit((unsigned char)*pValue))
             return LS_FAIL;
         int digit = *pValue++ - '0';
-        if (value > (std::numeric_limits<off_t>::max() - digit) / 10)
+        if (value > (INT64_MAX - digit) / 10)
             return LS_FAIL;
         value = value * 10 + digit;
     }
     contentLen = value;
     return LS_OK;
+}
+
+
+static int checkRespHeaderSize(HttpExtConnector *pExtConn, int nameLen,
+                               int valLen)
+{
+    uint32_t limit =
+        HttpServerConfig::getInstance().getMaxDynRespHeaderLen();
+    if (limit > HRH_MAX_LEN)
+        limit = HRH_MAX_LEN;
+
+    uint64_t fieldSize = (nameLen >= 0 && valLen >= 0)
+                       ? (uint64_t)nameLen + valLen + 4
+                       : UINT64_MAX;
+    if (nameLen >= 0 && valLen >= 0 && fieldSize <= limit)
+        return LS_OK;
+
+    LS_ERROR(pExtConn, "Dynamic response header field size %llu exceeds the "
+             "per-header limit %u; aborting request.",
+             (unsigned long long)fieldSize, limit);
+    pExtConn->abortReq();
+    pExtConn->errResponse(SC_500, NULL);
+    return HttpCgiTool::RESP_HEADER_ERR_SET;
 }
 
 
@@ -116,17 +138,14 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
 
     index = HttpRespHeaders::getIndex(pName, nameLen);
     if (index < HttpRespHeaders::H_HEADER_END)
-    {
         return processHeaderLine(pExtConn, index, pName, nameLen, pValue,
                                  valLen);
 
-    }
-//    if (( pName < pValue )&&(pValue - (pName + nameLen) < 5 ))
-//        return pExtConn->getHttpSession()->getResp()
-//                    ->appendHeaderLine( pName, pValue + valLen );
-//    else
+    int ret = checkRespHeaderSize(pExtConn, nameLen, valLen);
+    if (ret != LS_OK)
+        return ret;
     return pExtConn->getHttpSession()->getResp()->appendHeader(
-                    pName, nameLen, pValue, valLen);
+               pName, nameLen, pValue, valLen);
 }
 
 
@@ -163,6 +182,10 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     if (index == HttpRespHeaders::H_HEADER_END
         && (status & HEC_RESP_AUTHORIZED))
     {
+        int ret = checkRespHeaderSize(pExtConn, nameLen,
+                                      pLineEnd - pValue);
+        if (ret != LS_OK)
+            return ret;
         if (pKeyEnd != NULL && pKeyEnd > pLineBegin + 9
             && strncasecmp(pLineBegin, "Variable-", 9) == 0)
         {
@@ -176,6 +199,10 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     if (pExtConn->getHttpSession()->getState() == HSS_REDIRECT
         && pReq->getRedirHdrs() )
     {
+        int ret = checkRespHeaderSize(pExtConn, nameLen,
+                                      pLineEnd - pValue);
+        if (ret != LS_OK)
+            return ret;
         pReq->appendRedirHdr(pLineBegin, pLineEnd - pLineBegin);
         return 0;
     }
@@ -289,10 +316,6 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
                     "bad encoding value, `%.*s: %.*s`", nameLen, pName,
                     valLen, pValue);
         return 0;
-    case HttpRespHeaders::H_LINK:
-        //pExtConn->getHttpSession()->processLinkHeader(pValue, pLineEnd - pValue);
-        break;
-
     case HttpRespHeaders::H_SET_COOKIE:
         //pReq->getRespCacheCtrl().setHasCookie();
         pReq->processSetCookieHeader(pValue, valLen);
@@ -369,8 +392,12 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    int index, const char *pName, int nameLen,
                                    const char *pValue, int valLen)
 {
-    int ret = processHeaderLine2(pExtConn, index, pName, nameLen,
-                           pValue, valLen);
+    int ret = checkRespHeaderSize(pExtConn, nameLen, valLen);
+    if (ret != LS_OK)
+        return ret;
+
+    ret = processHeaderLine2(pExtConn, index, pName, nameLen,
+                             pValue, valLen);
     if (ret == 1)
     {
         LS_DBG_H(pExtConn->getHttpSession()->getLogSession(),

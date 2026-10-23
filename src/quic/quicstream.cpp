@@ -36,6 +36,7 @@
 
 QuicStream::~QuicStream()
 {
+    clearPendingHeaders();
     lsquic_stream_ctx_t::m_pStream = NULL;
 }
 
@@ -52,15 +53,7 @@ int QuicStream::init(lsquic_stream_t *s)
     else
         setProtocol(HIOS_PROTO_QUIC);
 
-    enum stream_flag flag = HIO_FLAG_FLOWCTRL;
-    /* Turn on the push capable flag: check it when push() is called and
-     * unset it if necessary.
-     */
-    if (lsquic_stream_is_pushed(m_pStream))
-        flag = flag | HIO_FLAG_IS_PUSH;
-    else
-        flag = flag | HIO_FLAG_PUSH_CAPABLE;
-    setFlag(flag, 1);
+    setFlag(HIO_FLAG_FLOWCTRL, 1);
 
     setState(HIOS_CONNECTED);
 
@@ -83,16 +76,10 @@ int QuicStream::init(lsquic_stream_t *s)
 
 int QuicStream::processHdrSet(void *hdr_set)
 {
-    UnpackedHeaders *hdrs;
     assert(hdr_set);
-    if ((long)hdr_set & 0x1L)
-        hdrs = (UnpackedHeaders *)((long)hdr_set & ~0x1L);
-    else
-    {
-        UpkdHdrBuilder *builder = (UpkdHdrBuilder *)hdr_set;
-        hdrs = builder->retrieveHeaders();
-        delete builder;
-    }
+    UpkdHdrBuilder *builder = (UpkdHdrBuilder *)hdr_set;
+    UnpackedHeaders *hdrs = builder->retrieveHeaders();
+    delete builder;
     assert(hdrs);
     if (processUpkdHdrs(hdrs) == LS_FAIL)
     {
@@ -169,7 +156,8 @@ void QuicStream::suspendWrite()
     if (!m_pStream)
         return;
     setFlag(HIO_FLAG_WANT_WRITE, 0);
-    lsquic_stream_wantwrite(m_pStream, 0);
+    lsquic_stream_wantwrite(m_pStream, m_pendingHeaders != NULL
+                            || m_headersPending || m_finPending);
 }
 
 
@@ -195,6 +183,32 @@ void QuicStream::suspendRead()
 
 int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, send_hdr_flag hdr_flag)
 {
+    if (!m_pStream)
+        return LS_FAIL;
+    if (!m_pendingHeaders && !m_headersPending)
+    {
+        int ret = sendHeaderBlock(pRespHeaders, hdr_flag);
+        if (ret != LS_FAIL || errno != EAGAIN)
+            return ret;
+    }
+    //LSQUIC may still be sending the preceding informational header block.
+    PendingHeaders *pending = new PendingHeaders;
+    pending->headers = new HttpRespHeaders;
+    pending->headers->copy(*pRespHeaders);
+    pending->flag = hdr_flag;
+    pending->next = NULL;
+    if (m_lastHeaders)
+        m_lastHeaders->next = pending;
+    else
+        m_pendingHeaders = pending;
+    m_lastHeaders = pending;
+    lsquic_stream_wantwrite(m_pStream, 1);
+    return LS_OK;
+}
+
+
+int QuicStream::sendHeaderBlock(HttpRespHeaders *pRespHeaders, send_hdr_flag hdr_flag)
+{
     lsquic_http_headers_t headers;
 
     if (!m_pStream)
@@ -203,7 +217,65 @@ int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, send_hdr_flag hdr
     headers.headers = pRespHeaders->begin();
     headers.count = pRespHeaders->end() - pRespHeaders->begin();
 
-    return lsquic_stream_send_headers(m_pStream, &headers, hdr_flag & SHF_EOS);
+    //Encoding failures do not always set errno; retry only a fresh EAGAIN.
+    errno = 0;
+    int ret = lsquic_stream_send_headers(m_pStream, &headers, hdr_flag & SHF_EOS);
+    if (ret == LS_OK)
+    {
+        if (hdr_flag & SHF_MORE_HDRS)
+            m_hasInformational = true;
+        if (m_hasInformational)
+        {
+            //After 1xx, LSQUIC's "headers sent" bit is already set. Wait for
+            //its write callback before allowing DATA after another HEADERS
+            //block, which may still be buffered in LSQUIC.
+            m_headersPending = true;
+            lsquic_stream_wantwrite(m_pStream, 1);
+        }
+    }
+    return ret;
+}
+
+
+int QuicStream::flushPendingHeaders()
+{
+    if (m_headersPending)
+        return LS_AGAIN;
+    while (m_pendingHeaders)
+    {
+        PendingHeaders *pending = m_pendingHeaders;
+        if (sendHeaderBlock(pending->headers, pending->flag) == LS_FAIL)
+        {
+            if (errno == EAGAIN)
+                return LS_AGAIN;
+            return LS_FAIL;
+        }
+        m_pendingHeaders = pending->next;
+        delete pending->headers;
+        delete pending;
+        if (!m_pendingHeaders)
+            m_lastHeaders = NULL;
+        if (m_headersPending)
+            return LS_AGAIN;
+    }
+    m_lastHeaders = NULL;
+    return LS_OK;
+}
+
+
+void QuicStream::clearPendingHeaders()
+{
+    while (m_pendingHeaders)
+    {
+        PendingHeaders *pending = m_pendingHeaders;
+        m_pendingHeaders = pending->next;
+        delete pending->headers;
+        delete pending;
+    }
+    m_lastHeaders = NULL;
+    m_hasInformational = false;
+    m_headersPending = false;
+    m_finPending = false;
 }
 
 
@@ -272,28 +344,6 @@ int QuicStream::read(char *pBuf, int size)
 }
 
 
-int QuicStream::push(UnpackedHeaders *hdrs)
-{
-    if (!m_pStream)
-        return -1;
-
-    lsquic_conn_t *pConn = lsquic_stream_conn(m_pStream);
-    lsquic_http_headers_t headers;
-    int pushed;
-    hdrs->prepareSendXpack(getProtocol() == HIOS_PROTO_HTTP3);
-    headers.headers = (lsxpack_header *)hdrs->begin();
-    headers.count = hdrs->end() - hdrs->begin();
-    pushed = lsquic_conn_push_stream(pConn, (void *)((long)hdrs | 0x1L),
-                                     m_pStream, &headers);
-    if (pushed == 0)
-        return 0;
-
-    LS_DBG_L("push_stream() returned %d, unset flag", pushed);
-    setFlag(HIO_FLAG_PUSH_CAPABLE, 0);
-    return -1;
-}
-
-
 int QuicStream::close()
 {
     LS_DBG_L(this, "QuicStream::close()");
@@ -308,7 +358,12 @@ int QuicStream::flush()
     LS_DBG_L(this, "QuicStream::flush()");
     if (!m_pStream)
         return -1;
-    return lsquic_stream_flush(m_pStream);
+    int ret = flushPendingHeaders();
+    if (ret == LS_FAIL)
+        return ret;
+    if (lsquic_stream_flush(m_pStream) == LS_FAIL)
+        return LS_FAIL;
+    return ret;
 }
 
 
@@ -316,6 +371,9 @@ int QuicStream::writev(const iovec *vector, int count)
 {
     if (!m_pStream)
         return -1;
+    int pending = flushPendingHeaders();
+    if (pending != LS_OK)
+        return pending == LS_AGAIN ? 0 : LS_FAIL;
     ssize_t ret = lsquic_stream_writev(m_pStream, vector, count);
     LS_DBG_L(this, "QuicStream::writev(), ret: %zd, errno: %d", ret, errno);
     if (ret > 0)
@@ -333,6 +391,9 @@ int QuicStream::write(const char *pBuf, int size)
 {
     if (!m_pStream)
         return -1;
+    int pending = flushPendingHeaders();
+    if (pending != LS_OK)
+        return pending == LS_AGAIN ? 0 : LS_FAIL;
     ssize_t ret = lsquic_stream_write(m_pStream, pBuf, size);
     LS_DBG_L(this, "QuicStream::writev(), to write: %d, ret: %zd, errno: %d",
              size, ret, errno);
@@ -350,6 +411,12 @@ int QuicStream::write(const char *pBuf, int size)
 
 int QuicStream::doneWrite()
 {
+    if (m_pendingHeaders || m_headersPending)
+    {
+        m_finPending = true;
+        lsquic_stream_wantwrite(m_pStream, 1);
+        return LS_OK;
+    }
     return lsquic_stream_shutdown(m_pStream, 1);
 }
 
@@ -418,7 +485,25 @@ int QuicStream::onWrite()
     }
     else
     {
-        if (getHandler())
+        //LSQUIC calls us after its buffered header block has been written.
+        m_headersPending = false;
+        int ret = flushPendingHeaders();
+        if (ret == LS_AGAIN)
+            return LS_OK;
+        if (ret == LS_FAIL)
+        {
+            close();
+            return LS_FAIL;
+        }
+        //Header draining temporarily enables callbacks even when the
+        //application has suspended writes. Restore its interest now.
+        lsquic_stream_wantwrite(m_pStream, isWantWrite());
+        if (m_finPending)
+        {
+            m_finPending = false;
+            return doneWrite();
+        }
+        if (isWantWrite() && getHandler())
             getHandler()->onWriteEx();
         if (getState() == HIOS_CLOSING)
         {
@@ -433,13 +518,7 @@ int QuicStream::onWrite()
 int QuicStream::onClose()
 {
     LS_DBG_L(this, "QuicStream::onClose()");
-    if (getFlag() & HIO_FLAG_IS_PUSH)
-    {
-        UnpackedHeaders *hdrs;
-        hdrs = (UnpackedHeaders *)lsquic_stream_get_hset(m_pStream);
-        if (hdrs)
-            delete hdrs;
-    }
+    clearPendingHeaders();
     if (getHandler())
         getHandler()->onCloseEx();
     m_pStream = NULL;
