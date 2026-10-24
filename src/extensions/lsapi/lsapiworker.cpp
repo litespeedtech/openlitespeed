@@ -19,9 +19,11 @@
 #include "lsapiconfig.h"
 #include "lsapiconn.h"
 #include <http/handlertype.h>
+#include <http/httpserverconfig.h>
 #include <main/configctx.h>
 #include <main/mainserverconfig.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 
 LsapiWorker::LsapiWorker(const char *pName)
@@ -38,6 +40,19 @@ LsapiWorker::~LsapiWorker()
 ExtConn *LsapiWorker::newConn()
 {
     return new LsapiConn();
+}
+
+
+//An idle connection holds an lsphp child another httpd worker may need
+int LsapiWorker::keepIdleConn() const
+{
+    if (!getConfig().getSelfManaged()
+        || (HttpServerConfig::getInstance().getChildren() <= 1))
+        return 1;
+    //Without LSAPI_AVOID_FORK, lsphp frees idle children itself and forks one
+    //per new connection, so closing would cost more than it saves.
+    const char *pAvoidFork = getConfig().getEnv()->find("LSAPI_AVOID_FORK");
+    return !(pAvoidFork && (atoi(pAvoidFork) > 0));
 }
 
 

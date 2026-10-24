@@ -201,9 +201,22 @@ void ExtWorker::recycleConn(ExtConn *pConn)
 //    //end of debug code
 
 
-    getConnPool().reuse(pConn);
+    reuseConn(pConn);
     LS_DBG_L("[%s] add recycled connection to connection pool!",
              m_pConfig->getURL());
+}
+
+
+//Pool a connection with no request, closing it first unless kept idle
+void ExtWorker::reuseConn(ExtConn *pConn)
+{
+    if (!keepIdleConn() && (pConn->getState() != ExtConn::DISCONNECTED))
+    {
+        LS_DBG_L("[%s] close idle connection instead of keeping it open.",
+                 m_pConfig->getURL());
+        pConn->close();
+    }
+    getConnPool().reuse(pConn);
 }
 
 
@@ -319,7 +332,7 @@ void ExtWorker::processPending()
         //    return;
     }
     if (pConn)
-        getConnPool().reuse(pConn);
+        reuseConn(pConn);
 
 }
 
