@@ -177,7 +177,7 @@ SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 set(BSSL_ADD_LIB  libdecrepit.a)
 ##########################################################################################
 #If you want to use Brotli Compression, just un-comment out the following commands
-set(BROTLI_ADD_LIB  libbrotlidec-static.a libbrotlienc-static.a libbrotlicommon-static.a)
+set(BROTLI_ADD_LIB  libbrotlidec.a libbrotlienc.a libbrotlicommon.a)
 add_definitions(-DUSE_BROTLI)
 ##########################################################################################
 #If you want to use IP2Location, just un-comment out the following commands
