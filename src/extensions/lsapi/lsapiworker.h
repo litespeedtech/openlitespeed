@@ -37,6 +37,7 @@ public:
     {   return *((LsapiConfig *)getConfigPointer());  }
 
     int startEx();
+    int keepIdleConn() const;
     LS_NO_COPY_ASSIGN(LsapiWorker);
 };
 
