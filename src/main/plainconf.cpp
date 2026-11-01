@@ -147,6 +147,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"enablespdy",                               NULL},
     {"enablestapling",                           NULL},
     {"enablestderrlog",                          NULL},
+    {"enablezstd",                                NULL},
+    {"enablezstdcompress",                        NULL},
     {"env",                                      NULL},
     {"errcode",                                  NULL},
     {"errorlog",                                 NULL},
@@ -365,6 +367,9 @@ plainconfKeywords plainconf::sKeywords[] =
     {"zconfname",                                NULL},
     {"zconfportlist",                            NULL},
     {"zconfsend",                                NULL},
+    {"zstdautoupdatestatic",                      NULL},
+    {"zstdcompresslevel",                         NULL},
+    {"zstdstaticcompresslevel",                   NULL},
 
 
     {"disableinitlogrotation",                   NULL},

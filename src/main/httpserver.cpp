@@ -2979,6 +2979,15 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         0
 #endif
     );
+    config.setZstdCompress(
+#ifdef USE_ZSTD
+        currentCtx.getLongValue(pNode, "enableZstdCompress", 0, 6, 4)
+#else
+        0
+#endif
+    );
+    config.setZstdCompressLevel(currentCtx.getLongValue(pNode,
+                                "zstdCompressLevel", 1, 22, 3));
     pValue = pNode->getChildValue("compressibleTypes");
     if (pValue == NULL)
         pValue = "default";
@@ -2993,6 +3002,10 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     );
     StaticFileCacheData::setStaticBrOptions(
         currentCtx.getLongValue(pNode, "brStaticCompressLevel", 0, 11, 6)
+    );
+    StaticFileCacheData::setStaticZstdOptions(
+        currentCtx.getLongValue(pNode, "zstdAutoUpdateStatic", 0, 1, 0),
+        currentCtx.getLongValue(pNode, "zstdStaticCompressLevel", 0, 22, 3)
     );
 
 

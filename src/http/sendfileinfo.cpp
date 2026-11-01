@@ -105,7 +105,9 @@ int SendFileInfo::readyCacheData(char compress)
         ret = m_pFileData->readyCompressed(compress);
         if (ret == 0)
         {
-            if ((compress & SFCD_MODE_BROTLI) && (m_pFileData->getBrotli() != NULL))
+            if ((compress & SFCD_MODE_ZSTD) && (m_pFileData->getZstd() != NULL))
+                setECache(m_pFileData->getZstd());
+            else if ((compress & SFCD_MODE_BROTLI) && (m_pFileData->getBrotli() != NULL))
                 setECache(m_pFileData->getBrotli());
             else
                 setECache(m_pFileData->getGzip());

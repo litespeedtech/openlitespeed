@@ -30,6 +30,7 @@
 #include <util/datetime.h>
 #include <util/brotlibuf.h>
 #include <util/gzipbuf.h>
+#include <util/zstdbuf.h>
 #include <util/stringtool.h>
 #include <util/vmembuf.h>
 
@@ -63,6 +64,9 @@ static int      s_iMaxFileSize          = 1024 * 1024;
 static int      s_iMinFileSize          = 300;
 
 static int      s_iBrCompressLevel    = 6;
+
+static int      s_iZstdEnabled        = 0;
+static int      s_iZstdCompressLevel  = 3;
 
 static const char *s_compressCachePath = DEFAULT_TMP_DIR;
 
@@ -275,7 +279,7 @@ const char *FileCacheDataEx::getCacheData(
 StaticFileCacheData::StaticFileCacheData()
 {
     memset(&m_pMimeType, 0,
-           (char *)(&m_pBrotli + 1) - (char *)&m_pMimeType);
+           (char *)(&m_pZstd + 1) - (char *)&m_pMimeType);
 }
 
 
@@ -286,6 +290,8 @@ StaticFileCacheData::~StaticFileCacheData()
         delete m_pGzip;
     if (m_pBrotli)
         delete m_pBrotli;
+    if (m_pZstd)
+        delete m_pZstd;
     if (m_pSSIScript)
         delete m_pSSIScript;
 }
@@ -536,7 +542,7 @@ static int createLockFile(const char *pReal, char *p)
 }
 
 
-int StaticFileCacheData::tryCreateCompressed(char useBrotli)
+int StaticFileCacheData::tryCreateCompressed(char algo)
 {
     AutoStr2 *pPath;
     if (!s_iAutoUpdateStaticGzip)
@@ -552,7 +558,18 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
         return LS_FAIL;
     }
 
-    pPath = useBrotli ? &m_bredPath : &m_gzippedPath;
+    switch (algo)
+    {
+    case SFCD_ALGO_ZSTD:
+        pPath = &m_zstdPath;
+        break;
+    case SFCD_ALGO_BROTLI:
+        pPath = &m_bredPath;
+        break;
+    default:
+        pPath = &m_gzippedPath;
+        break;
+    }
     char *p = pPath->buf() + pPath->len() + 4;
     int fd = createLockFile(pPath->buf(), p);
     if (fd == -1)
@@ -563,7 +580,7 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
     close(fd);
     if (size < 409600)
     {
-        long ret = compressFile(useBrotli);
+        long ret = compressFile(algo);
         if (ret == -1)
             LS_WARN("Failed to compress file %s, file size %ld!",
                     m_real.c_str(), (long)size);
@@ -586,7 +603,7 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
         //child process
         setpriority(PRIO_PROCESS, 0, 5);
 
-        long ret = compressFile(useBrotli);
+        long ret = compressFile(algo);
         if (ret == -1)
             LS_WARN("Failed to compress file %s, file size %ld!",
                     m_real.c_str(), (long)size);
@@ -630,7 +647,7 @@ int StaticFileCacheData::detectTrancate()
 }
 
 
-int StaticFileCacheData::compressFile(char useBrotli)
+int StaticFileCacheData::compressFile(char algo)
 {
     int ret;
     AutoStr2 *pPath;
@@ -640,23 +657,36 @@ int StaticFileCacheData::compressFile(char useBrotli)
     VMemBuf compressBuf;
     int iCompressLevel;
 
+#ifdef USE_ZSTD
+    ZstdBuf zstdBuf;
+#endif
 #ifdef USE_BROTLI
     BrotliBuf brBuf;
-    if (useBrotli)
+#endif
+
+#ifdef USE_ZSTD
+    if (algo == SFCD_ALGO_ZSTD)
+    {
+        pCompressor = &zstdBuf;
+        pPath = &m_zstdPath;
+        iCompressLevel = s_iZstdCompressLevel;
+    }
+    else
+#endif
+#ifdef USE_BROTLI
+    if (algo == SFCD_ALGO_BROTLI)
     {
         pCompressor = &brBuf;
         pPath = &m_bredPath;
         iCompressLevel = s_iBrCompressLevel;
     }
     else
-    {
 #endif
+    {
         pCompressor = &gzBuf;
         pPath = &m_gzippedPath;
         iCompressLevel = s_iGzipCompressLevel;
-#ifdef USE_BROTLI
     }
-#endif
 
     if (    //detectTrancate() ||
         (0 != pCompressor->init(Compressor::COMPRESSOR_COMPRESS, iCompressLevel)))
@@ -782,7 +812,7 @@ int StaticFileCacheData::buildCompressedPaths()
                           &achPath[n]);
     n += 30;
     char *pReal = m_gzippedPath.prealloc(n + 6);
-    if ((!pReal) || (!m_bredPath.prealloc(n + 6)))
+    if ((!pReal) || (!m_bredPath.prealloc(n + 6)) || (!m_zstdPath.prealloc(n + 6)))
     {
         LS_DBG_H("[StaticFileCacheData::buildCompressedPaths] error. pReal %p m_gzippedPath %s m_bredPath %s.",
                pReal, m_gzippedPath.c_str(), m_bredPath.c_str());
@@ -801,12 +831,29 @@ int StaticFileCacheData::buildCompressedPaths()
     pBred[n + 3] = 'b'; // .lsb
     m_bredPath.setLen(n);
 
+    if (!m_zstdPath.setStr(pReal, n + 6))
+    {
+        LS_DBG_H("[StaticFileCacheData::buildCompressedPaths] m_zstdPath.setStr error. pReal %p n %d.",
+               pReal, n);
+        return LS_FAIL;
+    }
+    char *pZstd = m_zstdPath.buf();
+    pZstd[n + 3] = 'q'; // .lsq
+    m_zstdPath.setLen(n);
+
     return 0;
 }
 
 
 int StaticFileCacheData::setReadiedCompressData(char compressMode)
 {
+    if ((compressMode & SFCD_MODE_ZSTD) && (m_pZstd))
+    {
+        if ((m_pZstd->isCached() ||
+            (m_pZstd->getfd() != -1)))
+            return 0;
+        return m_pZstd->readyData(m_zstdPath.c_str());
+    }
     if ((compressMode & SFCD_MODE_BROTLI) && (m_pBrotli))
     {
         if ((m_pBrotli->isCached() ||
@@ -826,12 +873,12 @@ int StaticFileCacheData::setReadiedCompressData(char compressMode)
 
 
 int StaticFileCacheData::compressHelper(AutoStr2 &path, FileCacheDataEx *&pData,
-    struct stat &st, int exists, char isBrotli)
+    struct stat &st, int exists, char algo)
 {
     int ret;
     if (exists != -1)
         unlink(path.c_str());
-    ret = tryCreateCompressed(isBrotli);
+    ret = tryCreateCompressed(algo);
     if (ret == -1)
     {
         if (pData)
@@ -862,11 +909,12 @@ int StaticFileCacheData::readyCompressed(char compressMode)
     if (tm == m_tmLastCheck)
         return setReadiedCompressData(compressMode);
 
-    int statBr = -1, retGz = -1, statGz = -1;
+    int statZstd = -1, statBr = -1, retGz = -1, statGz = -1;
     struct stat stGzip;
     struct stat stBr;
+    struct stat stZstd;
     m_tmLastCheck = tm;
-    // Both paths matter, but bredPath is set last.
+    // All 3 paths matter, but bredPath (and now zstdPath) are set last.
     if (!m_bredPath.c_str() || !*m_bredPath.c_str())
     {
         if (buildCompressedPaths() == -1)
@@ -876,8 +924,36 @@ int StaticFileCacheData::readyCompressed(char compressMode)
         }
     }
 
+#ifndef USE_ZSTD
+    compressMode &= ~SFCD_MODE_ZSTD;
+#endif
+    if ((compressMode & SFCD_MODE_ZSTD) && !s_iZstdEnabled)
+        compressMode &= ~SFCD_MODE_ZSTD;
+
     if ((compressMode & SFCD_MODE_BROTLI) && s_iBrCompressLevel == 0)
         compressMode &= ~SFCD_MODE_BROTLI;
+
+    if (compressMode & SFCD_MODE_ZSTD) // zstd active AND not valid
+    {
+        statZstd = ls_fio_stat(m_zstdPath.c_str(), &stZstd);
+        LS_DBG_H("readyCompressed() path %s statZstd %d",
+                m_zstdPath.c_str(), statZstd);
+        if ((statZstd == -1) || (stZstd.st_mtime != getLastMod()))
+        {
+            // update zstd
+            if ((statZstd = compressHelper(m_zstdPath, m_pZstd, stZstd,
+                                            statZstd, SFCD_ALGO_ZSTD)))
+            {
+                LS_DBG_H("readyCompressed compress zstd error %s.",
+                         m_zstdPath.c_str());
+                compressMode &= ~SFCD_MODE_ZSTD;
+            }
+            else
+                compressMode &= ~(SFCD_MODE_BROTLI | SFCD_MODE_GZIP);
+        }
+        else
+            compressMode &= ~(SFCD_MODE_BROTLI | SFCD_MODE_GZIP);
+    }
 
     if (compressMode & SFCD_MODE_BROTLI) // brotli active AND not valid
     {
@@ -887,7 +963,8 @@ int StaticFileCacheData::readyCompressed(char compressMode)
         if ((statBr == -1) || (stBr.st_mtime != getLastMod()))
         {
             // update br
-            if ((statBr = compressHelper(m_bredPath, m_pBrotli, stBr, statBr, 1)))
+            if ((statBr = compressHelper(m_bredPath, m_pBrotli, stBr, statBr,
+                                          SFCD_ALGO_BROTLI)))
             {
                 LS_DBG_H("readyCompressed compress br error %s.",
                          m_bredPath.c_str());
@@ -907,7 +984,8 @@ int StaticFileCacheData::readyCompressed(char compressMode)
                 || (stGzip.st_mtime != getLastMod()));
         LS_DBG_H("readyCompressed() path %s statGz %d retGz %d",
                  m_gzippedPath.c_str(), statGz, retGz);
-        if (retGz && (statGz = compressHelper(m_gzippedPath, m_pGzip, stGzip, statGz, 0)))
+        if (retGz && (statGz = compressHelper(m_gzippedPath, m_pGzip, stGzip,
+                                               statGz, SFCD_ALGO_GZIP)))
         {
             LS_DBG_H("readyCompressed() compress gzip error %s or file size not suitable for gzip.",
                     m_gzippedPath.c_str());
@@ -915,7 +993,10 @@ int StaticFileCacheData::readyCompressed(char compressMode)
         }
     }
 
-    if ((compressMode & SFCD_MODE_BROTLI)
+    if ((compressMode & SFCD_MODE_ZSTD)
+        && (statZstd != -1) && ((!m_pZstd) || (m_pZstd->isDirty(stZstd))))
+        buildCompressedCache(m_pZstd, stZstd);
+    else if ((compressMode & SFCD_MODE_BROTLI)
         && (statBr != -1) && ((!m_pBrotli) || (m_pBrotli->isDirty(stBr))))
         buildCompressedCache(m_pBrotli, stBr);
     else if ((compressMode & SFCD_MODE_GZIP)
@@ -932,6 +1013,8 @@ int StaticFileCacheData::release()
         m_pGzip->release();
     if (m_pBrotli)
         m_pBrotli->release();
+    if (m_pZstd)
+        m_pZstd->release();
     return 0;
 }
 
@@ -955,4 +1038,11 @@ void StaticFileCacheData::setCompressCachePath(const char *pPath)
 void StaticFileCacheData::setStaticBrOptions(int level)
 {
     s_iBrCompressLevel = level;
+}
+
+
+void StaticFileCacheData::setStaticZstdOptions(int enable, int level)
+{
+    s_iZstdEnabled = enable && level > 0;
+    s_iZstdCompressLevel = level;
 }
