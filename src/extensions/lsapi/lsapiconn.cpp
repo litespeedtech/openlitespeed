@@ -1216,7 +1216,10 @@ void LsapiConn::cleanUp()
 {
     setConnector(NULL);
     reset();
-    if (getState() == ABORT)
+    //persistConn 0 closes after each request, as FastCGI does. A kept connection
+    //holds an lsphp child, and every server worker keeps its own: with more
+    //workers than children, requests from the other workers waited for one.
+    if (getState() == ABORT || !getWorker()->getConfigPointer()->isPersistConn())
         close();
     recycle();
 }
