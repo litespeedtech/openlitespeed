@@ -4741,6 +4741,16 @@ int HttpReq::applyOps(HttpSession * pSession,
             if (iter->isComplexValue() || iter->getEnv())
                 return LS_AGAIN;
         }
+        if (iter->getEnv())
+        {
+            //env=VAR applies when VAR exists, env=!VAR when it does not.
+            const char *pName = iter->getEnv()->c_str();
+            int nameLen = iter->getEnv()->len();
+            int negate = (*pName == '!');
+            int valLen = 0;
+            if ((getEnv(pName + negate, nameLen - negate, valLen) != NULL) == negate)
+                continue;
+        }
         applyOp(pSession, pRespHeader, iter);
     }
     return LS_OK;
