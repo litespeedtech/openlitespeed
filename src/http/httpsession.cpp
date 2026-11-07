@@ -2064,7 +2064,10 @@ int HttpSession::processVHostRewrite()
     const HttpContext *pContext = &(m_request.getVHost()->getRootContext());
     int ret = 0;
     m_request.orContextState(PROCESS_CONTEXT);
-    if ((!m_request.getContextState(SKIP_REWRITE))
+    //An ACME challenge skips the rules of .htaccess files, which belong to the
+    //site. The rules in the vhost configuration are the administrator's and
+    //apply to it as in Apache: forcing HTTPS, or answering the challenge.
+    if ((!m_request.getContextState(SKIP_REWRITE) || m_request.isChallenge())
         && pContext->rewriteEnabled() & REWRITE_ON)
     {
         ret = RewriteEngine::getInstance().processRuleSet(
