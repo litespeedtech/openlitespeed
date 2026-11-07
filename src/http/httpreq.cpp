@@ -2937,12 +2937,21 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
     if (p != pEnd)
     {
         // set PATH_INFO and SCRIPT_NAME
-        ls_str_xsetstr(&m_pathInfo, p, pEnd - p, m_pPool);
-        int orgURILen = getOrgURILen();
-        if (pEnd - p < orgURILen)
+        int infoLen = pEnd - p;
+        ls_str_xsetstr(&m_pathInfo, p, infoLen, m_pPool);
+        //The path info is the tail of the URI being served. After a rewrite to
+        //"script.php/extra" that is the new URI, which the requested one does
+        //not end with; SCRIPT_NAME then kept the path info and PHP-FPM
+        //answered "File not found.".
+        if (infoLen < uriLen
+            && strncmp(pURI + uriLen - infoLen, p, infoLen) == 0)
+            m_iScriptNameLen = uriLen - infoLen;
+        else
         {
-            if (strncmp(getOrgURI() + orgURILen - (pEnd - p), p, pEnd - p) == 0)
-                m_iScriptNameLen = uriLen - (pEnd - p);
+            int orgURILen = getOrgURILen();
+            if (infoLen < orgURILen
+                && strncmp(getOrgURI() + orgURILen - infoLen, p, infoLen) == 0)
+                m_iScriptNameLen = uriLen - infoLen;
         }
         *p = 0;
     }
