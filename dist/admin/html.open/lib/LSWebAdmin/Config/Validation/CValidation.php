@@ -839,16 +839,16 @@ class CValidation
 			return -1;
 		}
 
-		$s = substr($path, 0, 1);
-
-		if (strpos($path, '$VH_NAME') !== false) {
+		if (stripos($path, '$VH_NAME') !== false) {
 			$viewName = ($this->_request == null) ? null : $this->_request->GetViewName();
 			if ($viewName == null) {
 				$err = 'Fail to find $VH_NAME';
 				return -1;
 			}
-			$path = str_replace('$VH_NAME', $viewName, $path);
+			$path = str_ireplace('$VH_NAME', $viewName, $path);
 		}
+
+		$s = substr($path, 0, 1);
 
 		if ($s == '/') {
 			return 1;
