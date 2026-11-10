@@ -61,6 +61,7 @@ class ExtWorker : public HttpHandler
 
     void processPending();
     void failOutstandingReqs();
+    void reuseConn(ExtConn *pConn);
 
 protected:
     void setConfigPointer(ExtWorkerConfig *pConfig)
@@ -136,6 +137,7 @@ public:
     virtual int startEx()       {   return 1;           }
     virtual int stop()          {   m_iState = ST_NOTSTARTED; return 0;  }
     virtual int addNewProcess() {   return 0;           }
+    virtual int keepIdleConn() const    {   return 1;       }
     virtual int startOnDemond(int force) {   return 0;           }
     virtual int runOnStartUp()  {   return 0;           }
     virtual void detectDiedPid() {}
